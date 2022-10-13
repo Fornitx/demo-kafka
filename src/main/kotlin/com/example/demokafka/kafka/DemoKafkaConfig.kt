@@ -19,9 +19,9 @@ class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
     fun kafkaConsumer(): ReactiveKafkaConsumerTemplate<String, DemoRequest> {
         val consumerProperties = properties.kafka.buildConsumerProperties()
         val receiverOptions = ReceiverOptions.create<String, DemoRequest>(consumerProperties)
-            .subscription(listOf(properties.kafka.inputTopic))
             .withKeyDeserializer(StringDeserializer())
             .withValueDeserializer(JsonDeserializer<DemoRequest>().trustedPackages("*"))
+            .subscription(listOf(properties.kafka.inputTopic))
         return ReactiveKafkaConsumerTemplate(receiverOptions)
     }
 
