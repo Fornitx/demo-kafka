@@ -1,0 +1,22 @@
+#spring:
+#  kafka:
+#    consumer:
+#      group-id: demo
+#      auto-offset-reset: earliest
+#    bootstrap-servers:
+#
+
+logging:
+  pattern:
+    dateformat: HH:mm:ss.SSS
+  level:
+    org.apache.kafka: WARN
+
+demo:
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER}
+    input-topic: input_topic
+    output-topic: output_topic
+    consumer:
+      group-id: demo
+      auto-offset-reset: earliest
