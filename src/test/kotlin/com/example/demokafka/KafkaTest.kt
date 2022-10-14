@@ -2,20 +2,21 @@ package com.example.demokafka
 
 import com.example.demokafka.kafka.DemoKafkaProperties
 import com.example.demokafka.kafka.dto.DemoRequest
+import com.example.demokafka.kafka.dto.DemoResponse
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
-import org.springframework.kafka.support.TopicPartitionOffset
 import org.springframework.kafka.support.serializer.JsonDeserializer
 import org.springframework.kafka.support.serializer.JsonSerializer
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 
 @SpringBootTest
 class KafkaTest : BaseKafkaTest() {
@@ -23,7 +24,7 @@ class KafkaTest : BaseKafkaTest() {
     private lateinit var properties: DemoKafkaProperties
 
     @Test
-    fun contextLoads() {
+    fun test() {
         val template = KafkaTemplate(
             DefaultKafkaProducerFactory(
                 mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers),
@@ -31,26 +32,35 @@ class KafkaTest : BaseKafkaTest() {
                 JsonSerializer<DemoRequest>()
             )
         )
-        template.setConsumerFactory(
-            DefaultKafkaConsumerFactory(
-                mapOf(
-                    ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers
-                ), StringDeserializer(), JsonDeserializer<DemoRequest>().trustedPackages("*")
-            )
+        val consumerFactory = DefaultKafkaConsumerFactory(
+            mapOf(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG to this::class.java.simpleName,
+            ),
+            StringDeserializer(),
+            JsonDeserializer<DemoResponse>().trustedPackages("*")
         )
 
-        TimeUnit.SECONDS.sleep(2)
         log.info { "Sending" }
         template.send(properties.kafka.inputTopic, DemoRequest("FOO_"))
         log.info { "Sent" }
 
-        val partitions = template.partitionsFor(properties.kafka.outputTopic)
-        log.info { "partitions: $partitions" }
+        val records = consume(consumerFactory, properties.kafka.outputTopic, Duration.ofSeconds(5), 2)
+        assertThat(records.count()).isEqualTo(2)
 
-        val received = template.receive(partitions.map { TopicPartitionOffset(it.topic(), it.partition(), 0) })
-        log.info { "received ${received.count()} : $received" }
+        val (first, second) = records.records(properties.kafka.outputTopic).toList()
 
-        val record = received.records(properties.kafka.outputTopic).iterator().next()
-        log.info { "record : $record" }
+        log.info {
+            "\nRecord 1\n" +
+                "\tkey : ${first.key()}\n" +
+                "\tvalue : ${first.value()}\n" +
+                "\theaders : ${first.headers()}"
+        }
+        log.info {
+            "\nRecord 2\n" +
+                "\tkey : ${second.key()}\n" +
+                "\tvalue : ${second.value()}\n" +
+                "\theaders : ${second.headers()}"
+        }
     }
 }

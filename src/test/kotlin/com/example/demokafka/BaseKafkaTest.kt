@@ -1,28 +1,35 @@
 package com.example.demokafka
 
+import com.github.dockerjava.api.model.ExposedPort
+import com.github.dockerjava.api.model.PortBinding
+import com.github.dockerjava.api.model.Ports
 import mu.KLogging
 import mu.KotlinLogging
+import org.apache.kafka.clients.consumer.ConsumerRecords
+import org.springframework.kafka.core.ConsumerFactory
+import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
+import java.time.Duration
 import kotlin.reflect.jvm.jvmName
 
 abstract class BaseKafkaTest {
     companion object : KLogging() {
         @JvmStatic
-        protected val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.2.1"))
-//            .withCreateContainerCmdModifier {
-//                it.hostConfig!!.withPortBindings(
-//                    PortBinding(
-//                        Ports.Binding.bindPort(9092),
-//                        ExposedPort(KafkaContainer.KAFKA_PORT)
-//                    ),
-////                    PortBinding(
-////                        Ports.Binding.bindPort(KafkaContainer.ZOOKEEPER_PORT),
-////                        ExposedPort(KafkaContainer.ZOOKEEPER_PORT)
-////                    )
-//                )
-//            }
-//    .withStartupTimeout(Duration.ofSeconds(10))
+        protected val kafkaContainer: KafkaContainer =
+            KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.2.1"))
+                .withCreateContainerCmdModifier {
+                    it.withPortBindings(
+                        PortBinding(
+                            Ports.Binding.bindPort(KafkaContainer.KAFKA_PORT),
+                            ExposedPort(KafkaContainer.KAFKA_PORT)
+                        ),
+                        PortBinding(
+                            Ports.Binding.bindPort(KafkaContainer.ZOOKEEPER_PORT),
+                            ExposedPort(KafkaContainer.ZOOKEEPER_PORT)
+                        )
+                    )
+                }
 
         init {
             kafkaContainer.start()
@@ -30,6 +37,18 @@ abstract class BaseKafkaTest {
             System.setProperty("KAFKA_SERVER", kafkaContainer.bootstrapServers)
 
             logger.info { "\nKafka Container started on ${kafkaContainer.bootstrapServers}" }
+        }
+
+        fun <K, V> consume(
+            consumerFactory: ConsumerFactory<K, V>,
+            topic: String,
+            timeout: Duration,
+            minRecords: Int,
+        ): ConsumerRecords<K, V> {
+            return consumerFactory.createConsumer().use { consumer ->
+                consumer.subscribe(listOf(topic))
+                KafkaTestUtils.getRecords(consumer, timeout.toMillis(), minRecords)
+            }
         }
     }
 

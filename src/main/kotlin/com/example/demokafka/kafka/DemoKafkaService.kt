@@ -8,7 +8,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
+import org.springframework.messaging.support.GenericMessage
 import reactor.core.Disposable
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kafka.receiver.ReceiverRecord
@@ -42,8 +44,19 @@ class DemoKafkaService(
     }
 
     private fun processRecord(record: ReceiverRecord<String, DemoRequest>): Mono<Void> {
-        log.info { "Kafka Consumer got record ${record.key()} : ${record.value()} : ${record.headers()}" }
-        return producer.send(properties.kafka.outputTopic, DemoResponse(record.value().msg.repeat(3)))
+        log.info {
+            "\nRecord received\n" +
+                "\tkey : ${record.key()}\n" +
+                "\tvalue : ${record.value()}\n" +
+                "\theaders : ${record.headers()}"
+        }
+        val msg = record.value().msg
+        val messages = listOf(
+            GenericMessage(DemoResponse(msg.repeat(3)), mapOf("RQID" to 1)),
+            GenericMessage(DemoResponse(msg.lowercase()), mapOf("RQID" to 2)),
+        )
+        return Flux.fromIterable(messages)
+            .concatMap { producer.send(properties.kafka.outputTopic, it) }
             .then()
     }
 
