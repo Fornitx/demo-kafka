@@ -1,3 +1,12 @@
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
 #spring:
 #  kafka:
 #    consumer:
@@ -6,17 +15,13 @@
 #    bootstrap-servers:
 #
 
-logging:
-  pattern:
-    dateformat: HH:mm:ss.SSS
-  level:
-    org.apache.kafka: WARN
 
 demo:
   kafka:
     bootstrap-servers: ${KAFKA_SERVER}
     input-topic: input_topic
     output-topic: output_topic
+    health-check-timeout: 3s
     consumer:
       group-id: demo
       auto-offset-reset: earliest

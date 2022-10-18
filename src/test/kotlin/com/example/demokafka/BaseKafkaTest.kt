@@ -1,8 +1,5 @@
 package com.example.demokafka
 
-import com.github.dockerjava.api.model.ExposedPort
-import com.github.dockerjava.api.model.PortBinding
-import com.github.dockerjava.api.model.Ports
 import mu.KLogging
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecords
@@ -18,18 +15,18 @@ abstract class BaseKafkaTest {
         @JvmStatic
         protected val kafkaContainer: KafkaContainer =
             KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.2.1"))
-                .withCreateContainerCmdModifier {
-                    it.withPortBindings(
-                        PortBinding(
-                            Ports.Binding.bindPort(KafkaContainer.KAFKA_PORT),
-                            ExposedPort(KafkaContainer.KAFKA_PORT)
-                        ),
-                        PortBinding(
-                            Ports.Binding.bindPort(KafkaContainer.ZOOKEEPER_PORT),
-                            ExposedPort(KafkaContainer.ZOOKEEPER_PORT)
-                        )
-                    )
-                }
+//                .withCreateContainerCmdModifier {
+//                    it.withPortBindings(
+//                        PortBinding(
+//                            Ports.Binding.bindPort(KafkaContainer.KAFKA_PORT),
+//                            ExposedPort(KafkaContainer.KAFKA_PORT)
+//                        ),
+//                        PortBinding(
+//                            Ports.Binding.bindPort(KafkaContainer.ZOOKEEPER_PORT),
+//                            ExposedPort(KafkaContainer.ZOOKEEPER_PORT)
+//                        )
+//                    )
+//                }
 
         init {
             kafkaContainer.start()
