@@ -1,15 +1,28 @@
 package com.example.demokafka
 
+import com.example.demokafka.kafka.dto.DemoRequest
+import com.example.demokafka.kafka.dto.DemoResponse
 import mu.KLogging
 import mu.KotlinLogging
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.StringDeserializer
+import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.kafka.core.ConsumerFactory
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory
+import org.springframework.kafka.core.DefaultKafkaProducerFactory
+import org.springframework.kafka.core.KafkaTemplate
+import org.springframework.kafka.support.serializer.JsonDeserializer
+import org.springframework.kafka.support.serializer.JsonSerializer
 import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.springframework.test.annotation.DirtiesContext
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import kotlin.reflect.jvm.jvmName
 
+@DirtiesContext
 abstract class BaseKafkaTest {
     companion object : KLogging() {
         @JvmStatic
@@ -50,4 +63,23 @@ abstract class BaseKafkaTest {
     }
 
     protected val log = KotlinLogging.logger(this::class.jvmName)
+
+    protected val template by lazy {
+        KafkaTemplate(
+            DefaultKafkaProducerFactory(
+                mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers),
+                StringSerializer(),
+                JsonSerializer<DemoRequest>()
+            )
+        )
+    }
+    protected val consumerFactory by lazy {  DefaultKafkaConsumerFactory(
+        mapOf(
+            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers,
+            ConsumerConfig.GROUP_ID_CONFIG to BaseKafkaTest::class.simpleName,
+            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+        ),
+        StringDeserializer(),
+        JsonDeserializer<DemoResponse>().trustedPackages("*")
+    )}
 }
