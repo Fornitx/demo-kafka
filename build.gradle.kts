@@ -23,7 +23,7 @@ dependencies {
 	implementation("org.springframework.kafka:spring-kafka")
 	implementation("io.projectreactor.kafka:reactor-kafka")
 
-	implementation("io.github.microutils:kotlin-logging-jvm:3.0.2")
+	implementation("io.github.microutils:kotlin-logging-jvm:3.0.4")
 	
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")

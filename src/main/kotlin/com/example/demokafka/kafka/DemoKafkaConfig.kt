@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
+import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
 import org.springframework.kafka.support.serializer.JsonDeserializer
 import org.springframework.kafka.support.serializer.JsonSerializer
 import reactor.kafka.receiver.ReceiverOptions
@@ -24,7 +25,7 @@ class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
         val consumerProperties = properties.kafka.buildConsumerProperties()
         val receiverOptions = ReceiverOptions.create<String, DemoRequest>(consumerProperties)
             .withKeyDeserializer(StringDeserializer())
-            .withValueDeserializer(JsonDeserializer<DemoRequest>().trustedPackages("*"))
+            .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(DemoRequest::class.java)))
             .subscription(listOf(properties.kafka.inputTopic))
         log.info { "\nKafkaConsumer created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
         return ReactiveKafkaConsumerTemplate(receiverOptions)

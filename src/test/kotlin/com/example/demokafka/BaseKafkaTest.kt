@@ -1,6 +1,5 @@
 package com.example.demokafka
 
-import com.example.demokafka.kafka.dto.DemoRequest
 import com.example.demokafka.kafka.dto.DemoResponse
 import mu.KLogging
 import mu.KotlinLogging
@@ -14,7 +13,6 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.serializer.JsonDeserializer
-import org.springframework.kafka.support.serializer.JsonSerializer
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import org.testcontainers.containers.KafkaContainer
@@ -69,7 +67,7 @@ abstract class BaseKafkaTest {
             DefaultKafkaProducerFactory(
                 mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers),
                 StringSerializer(),
-                JsonSerializer<DemoRequest>()
+                StringSerializer()
             )
         )
     }
@@ -80,6 +78,6 @@ abstract class BaseKafkaTest {
             ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
         ),
         StringDeserializer(),
-        JsonDeserializer<DemoResponse>().trustedPackages("*")
+        JsonDeserializer(DemoResponse::class.java)
     )}
 }

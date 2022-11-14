@@ -6,8 +6,11 @@ import mu.KotlinLogging
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
+import org.springframework.core.log.LogAccessor
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
+import org.springframework.kafka.listener.ListenerUtils
+import org.springframework.kafka.support.serializer.SerializationUtils
 import org.springframework.messaging.support.GenericMessage
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
@@ -50,7 +53,20 @@ class DemoKafkaService(
                 "\tvalue : ${record.value()}\n" +
                 "\theaders : ${record.headers()}"
         }
-        val msg = record.value().msg
+        val value = record.value()
+        if (value == null) {
+            val errorHeader = record.headers().lastHeader(SerializationUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER)
+            if (errorHeader != null) {
+                log.error(
+                    ListenerUtils.byteArrayToDeserializationException(
+                        LogAccessor(DemoKafkaService::class.java),
+                        errorHeader.value()
+                    )
+                ) { }
+            }
+            return Mono.empty()
+        }
+        val msg = value.msg
         val messages = listOf(
             GenericMessage(DemoResponse(msg.repeat(3)), mapOf("RQID" to 1)),
             GenericMessage(DemoResponse(msg.lowercase()), mapOf("RQID" to 2)),
