@@ -1,5 +1,6 @@
 package com.example.demokafka.kafka
 
+import com.example.demokafka.kafka.DemoKafkaProperties.MyKafkaProperties
 import mu.KotlinLogging
 import org.apache.kafka.common.utils.ThreadUtils
 import org.springframework.beans.factory.DisposableBean
@@ -13,10 +14,15 @@ import java.util.concurrent.atomic.AtomicReference
 
 private val log = KotlinLogging.logger {}
 
-class KafkaHealthIndicator(private val kafka: DemoKafkaProperties.MyKafkaProperties) : HealthIndicator, DisposableBean {
+class KafkaHealthIndicator(private val kafka: MyKafkaProperties) : HealthIndicator, DisposableBean {
     private val consumerFactory: DefaultKafkaConsumerFactory<ByteArray, ByteArray>
     private val executor: ScheduledExecutorService
-    private val healthRef = AtomicReference(Health.unknown().withDetail("topic", kafka.inputTopic).build())
+
+    private val healthRef = AtomicReference(Health.unknown().withTopic().build())
+    private val healthUp = Health.up().withTopic().build()
+    private val healthDown = Health.down().withTopic().build()
+
+    private fun Health.Builder.withTopic() = this.withDetail("topic", kafka.inputTopic)
 
     init {
         val consumerProperties = kafka.buildConsumerProperties()
@@ -24,17 +30,14 @@ class KafkaHealthIndicator(private val kafka: DemoKafkaProperties.MyKafkaPropert
 
         executor = Executors.newSingleThreadScheduledExecutor(ThreadUtils.createThreadFactory("KHI-%d", true))
         executor.scheduleWithFixedDelay({
-            log.info { "start" }
-            TimeUnit.SECONDS.sleep(6)
             try {
-                consumerFactory.createConsumer().partitionsFor(kafka.inputTopic)
-                healthRef.set(Health.up().withDetail("topic", kafka.inputTopic).build())
+                consumerFactory.createConsumer().use { it.partitionsFor(kafka.inputTopic, kafka.healthCheckTimeout) }
+                healthRef.set(healthUp)
             } catch (ex: Exception) {
                 log.error(ex) {}
-                healthRef.set(Health.down().withDetail("topic", kafka.inputTopic).build())
+                healthRef.set(healthDown)
             }
-            log.info { "end" }
-        }, 0L, kafka.healthCheckTimeout!!.toMillis(), TimeUnit.MILLISECONDS)
+        }, 0L, kafka.healthCheckInterval!!.toMillis(), TimeUnit.MILLISECONDS)
     }
 
     override fun health(): Health {

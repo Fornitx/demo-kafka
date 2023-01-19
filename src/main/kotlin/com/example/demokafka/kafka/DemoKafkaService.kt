@@ -3,6 +3,7 @@ package com.example.demokafka.kafka
 import com.example.demokafka.kafka.dto.DemoRequest
 import com.example.demokafka.kafka.dto.DemoResponse
 import mu.KotlinLogging
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
@@ -15,8 +16,8 @@ import org.springframework.messaging.support.GenericMessage
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.scheduler.Schedulers
-import reactor.kafka.receiver.ReceiverRecord
+import reactor.util.retry.Retry
+import java.time.Duration
 
 private val log = KotlinLogging.logger { }
 
@@ -25,28 +26,24 @@ class DemoKafkaService(
     private val consumer: ReactiveKafkaConsumerTemplate<String, DemoRequest>,
     private val producer: ReactiveKafkaProducerTemplate<String, DemoResponse>
 ) : DisposableBean {
-    private val scheduler = Schedulers.newBoundedElastic(10, Integer.MAX_VALUE, "demo-kafka")
     private var subscription: Disposable? = null
 
     @EventListener(ApplicationReadyEvent::class)
     fun ready() {
-        subscription = consumer.receive()
-            .doOnSubscribe {
-                log.info { "Kafka Consumer started for topic ${properties.kafka.inputTopic}" }
-            }
-            .groupBy { it.receiverOffset().topicPartition() }
-            .flatMap { partitionFlux ->
-                partitionFlux.publishOn(scheduler)
-                    .concatMap { record ->
-                        processRecord(record).doAfterTerminate {
-                            record.receiverOffset().acknowledge()
-                        }
-                    }
-            }
+        subscription = Flux.defer {
+            consumer.receiveAutoAck()
+                .doOnSubscribe {
+                    log.info { "Kafka Consumer started for topic ${properties.kafka.inputTopic}" }
+                }
+                .concatMap(::processRecord)
+        }
+//            .doOnError { ex -> log.error(ex) { } }
+            .retryWhen(Retry.fixedDelay(Long.MAX_VALUE, Duration.ofSeconds(1)))
             .subscribe()
+//        Thread.sleep(30_000)
     }
 
-    private fun processRecord(record: ReceiverRecord<String, DemoRequest>): Mono<Void> {
+    private fun processRecord(record: ConsumerRecord<String, DemoRequest>): Mono<Void> {
         log.info {
             "\nRecord received\n" +
                 "\tkey : ${record.key()}\n" +
@@ -78,6 +75,5 @@ class DemoKafkaService(
 
     override fun destroy() {
         subscription?.dispose()
-        scheduler.dispose()
     }
 }

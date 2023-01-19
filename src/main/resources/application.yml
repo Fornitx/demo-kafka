@@ -2,10 +2,19 @@ management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+    shutdown:
+      enabled: true
   endpoints:
     web:
       exposure:
         include: "*"
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
 
 #spring:
 #  kafka:
@@ -18,10 +27,13 @@ management:
 
 demo:
   kafka:
-    bootstrap-servers: ${KAFKA_SERVER}
+#    bootstrap-servers: ${KAFKA_SERVER}
+    bootstrap-servers: localhost:9094
+#    bootstrap-servers: localhost:9093
     input-topic: input_topic
     output-topic: output_topic
-    health-check-timeout: 3s
+    health-check-timeout: 10s
+    health-check-interval: 10s
     consumer:
       group-id: demo
       auto-offset-reset: earliest

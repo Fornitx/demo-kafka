@@ -8,10 +8,9 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 @SpringBootTest
-class KafkaTest1 : BaseKafkaTest() {
+class KafkaTest1 : AbstractKafkaTest() {
     @Autowired
     private lateinit var properties: DemoKafkaProperties
 
@@ -54,7 +53,5 @@ class KafkaTest1 : BaseKafkaTest() {
             "{{}"
         ).get()
         log.info { "Sent $sendResult" }
-
-        TimeUnit.SECONDS.sleep(5)
     }
 }

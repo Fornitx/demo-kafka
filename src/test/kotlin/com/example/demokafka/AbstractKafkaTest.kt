@@ -1,6 +1,9 @@
 package com.example.demokafka
 
 import com.example.demokafka.kafka.dto.DemoResponse
+import com.github.dockerjava.api.model.ExposedPort
+import com.github.dockerjava.api.model.PortBinding
+import com.github.dockerjava.api.model.Ports
 import mu.KLogging
 import mu.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -21,23 +24,23 @@ import java.time.Duration
 import kotlin.reflect.jvm.jvmName
 
 @DirtiesContext
-abstract class BaseKafkaTest {
+abstract class AbstractKafkaTest {
     companion object : KLogging() {
         @JvmStatic
         protected val kafkaContainer: KafkaContainer =
             KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:5.2.1"))
-//                .withCreateContainerCmdModifier {
-//                    it.withPortBindings(
-//                        PortBinding(
-//                            Ports.Binding.bindPort(KafkaContainer.KAFKA_PORT),
-//                            ExposedPort(KafkaContainer.KAFKA_PORT)
-//                        ),
-//                        PortBinding(
-//                            Ports.Binding.bindPort(KafkaContainer.ZOOKEEPER_PORT),
-//                            ExposedPort(KafkaContainer.ZOOKEEPER_PORT)
-//                        )
-//                    )
-//                }
+                .withCreateContainerCmdModifier {
+                    it.hostConfig!!.withPortBindings(
+                        PortBinding(
+                            Ports.Binding.bindPort(KafkaContainer.KAFKA_PORT),
+                            ExposedPort(KafkaContainer.KAFKA_PORT)
+                        ),
+                        PortBinding(
+                            Ports.Binding.bindPort(KafkaContainer.ZOOKEEPER_PORT),
+                            ExposedPort(KafkaContainer.ZOOKEEPER_PORT)
+                        )
+                    )
+                }.withReuse(true)
 
         init {
             kafkaContainer.start()
@@ -55,7 +58,7 @@ abstract class BaseKafkaTest {
         ): ConsumerRecords<K, V> {
             return consumerFactory.createConsumer().use { consumer ->
                 consumer.subscribe(listOf(topic))
-                KafkaTestUtils.getRecords(consumer, timeout.toMillis(), minRecords)
+                KafkaTestUtils.getRecords(consumer, timeout, minRecords)
             }
         }
     }
@@ -71,13 +74,15 @@ abstract class BaseKafkaTest {
             )
         )
     }
-    protected val consumerFactory by lazy {  DefaultKafkaConsumerFactory(
-        mapOf(
-            ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers,
-            ConsumerConfig.GROUP_ID_CONFIG to BaseKafkaTest::class.simpleName,
-            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
-        ),
-        StringDeserializer(),
-        JsonDeserializer(DemoResponse::class.java)
-    )}
+    protected val consumerFactory by lazy {
+        DefaultKafkaConsumerFactory(
+            mapOf(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG to AbstractKafkaTest::class.simpleName,
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+            ),
+            StringDeserializer(),
+            JsonDeserializer(DemoResponse::class.java)
+        )
+    }
 }

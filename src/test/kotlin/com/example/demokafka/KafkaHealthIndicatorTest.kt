@@ -10,7 +10,7 @@ import org.springframework.test.web.reactive.server.expectBody
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @AutoConfigureWebTestClient
-class KafkaHealthIndicatorTest : BaseKafkaTest() {
+class KafkaHealthIndicatorTest : AbstractKafkaTest() {
     @Autowired
     private lateinit var client: WebTestClient
 

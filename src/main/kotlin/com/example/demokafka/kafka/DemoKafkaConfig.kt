@@ -5,7 +5,6 @@ import com.example.demokafka.kafka.dto.DemoResponse
 import mu.KotlinLogging
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
@@ -27,7 +26,9 @@ class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
             .withKeyDeserializer(StringDeserializer())
             .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(DemoRequest::class.java)))
             .subscription(listOf(properties.kafka.inputTopic))
+
         log.info { "\nKafkaConsumer created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
+
         return ReactiveKafkaConsumerTemplate(receiverOptions)
     }
 
@@ -37,17 +38,19 @@ class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
         val senderOptions = SenderOptions.create<String, DemoResponse>(producerProperties)
             .withKeySerializer(StringSerializer())
             .withValueSerializer(JsonSerializer())
+
         log.info { "\nKafkaProducer created for topic '${properties.kafka.outputTopic}' on server ${properties.kafka.bootstrapServers}" }
+
         return ReactiveKafkaProducerTemplate(senderOptions)
     }
 
     @Bean
     fun kafkaService(): DemoKafkaService = DemoKafkaService(properties, kafkaConsumer(), kafkaProducer())
 
-    @ConditionalOnProperty("demo.kafka.health-check-timeout", matchIfMissing = false)
-    @Bean
+//    @Bean
     fun kafkaHealthIndicator(): KafkaHealthIndicator {
         log.info { "\nKafkaHealthIndicator created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
+
         return KafkaHealthIndicator(properties.kafka)
     }
 }
