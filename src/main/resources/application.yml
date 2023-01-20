@@ -28,9 +28,9 @@ management:
 demo:
   kafka:
 #    bootstrap-servers: ${KAFKA_SERVER}
-    bootstrap-servers: localhost:9094
-#    bootstrap-servers: localhost:9093
-    input-topic: input_topic
+#    bootstrap-servers: localhost:9094
+    bootstrap-servers: localhost:9093
+    input-topic: input_topic5
     output-topic: output_topic
     health-check-timeout: 10s
     health-check-interval: 10s

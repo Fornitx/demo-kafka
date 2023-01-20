@@ -20,7 +20,7 @@ class KafkaHealthIndicatorTest : AbstractKafkaTest() {
     @Test
     fun test() {
         val body = client.get()
-            .uri("/actuator/health/kafka")
+            .uri("/actuator/health")
             .exchange()
             .expectStatus().isOk
             .expectBody<String>()
