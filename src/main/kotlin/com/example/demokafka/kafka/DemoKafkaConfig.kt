@@ -1,29 +1,36 @@
 package com.example.demokafka.kafka
 
 import com.example.demokafka.kafka.dto.DemoRequest
-import com.fasterxml.jackson.databind.ObjectMapper
-import mu.KotlinLogging
+import com.example.demokafka.kafka.dto.DemoResponse
+import com.example.demokafka.properties.DemoKafkaProperties
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
 import org.springframework.kafka.support.serializer.JsonDeserializer
+import org.springframework.kafka.support.serializer.JsonSerializer
 import reactor.kafka.receiver.ReceiverOptions
 import reactor.kafka.sender.SenderOptions
 
 private val log = KotlinLogging.logger {}
 
 @Configuration
-class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
+class DemoKafkaConfig(
+    private val springKafkaProperties: KafkaProperties,
+    private val properties: DemoKafkaProperties
+) {
     @Bean
     fun kafkaConsumer(): ReactiveKafkaConsumerTemplate<String, DemoRequest> {
-        val consumerProperties = properties.kafka.buildConsumerProperties()
+        val consumerProperties =
+            springKafkaProperties.buildConsumerProperties() + properties.kafka.buildConsumerProperties()
         val receiverOptions = ReceiverOptions.create<String, DemoRequest>(consumerProperties)
             .withKeyDeserializer(StringDeserializer())
-            .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(DemoRequest::class.java)))
+            .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(DemoRequest::class.java).ignoreTypeHeaders()))
             .subscription(listOf(properties.kafka.inputTopic))
 
         log.info { "\nKafkaConsumer created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
@@ -32,11 +39,12 @@ class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
     }
 
     @Bean
-    fun kafkaProducer(): ReactiveKafkaProducerTemplate<String, String> {
-        val producerProperties = properties.kafka.buildProducerProperties()
-        val senderOptions = SenderOptions.create<String, String>(producerProperties)
+    fun kafkaProducer(): ReactiveKafkaProducerTemplate<String, DemoResponse> {
+        val producerProperties =
+            springKafkaProperties.buildConsumerProperties() + properties.kafka.buildProducerProperties()
+        val senderOptions = SenderOptions.create<String, DemoResponse>(producerProperties)
             .withKeySerializer(StringSerializer())
-            .withValueSerializer(StringSerializer())
+            .withValueSerializer(JsonSerializer<DemoResponse>().noTypeInfo())
 
         log.info { "\nKafkaProducer created for topic '${properties.kafka.outputTopic}' on server ${properties.kafka.bootstrapServers}" }
 
@@ -44,14 +52,14 @@ class DemoKafkaConfig(private val properties: DemoKafkaProperties) {
     }
 
     @Bean
-    fun kafkaService(objectMapper: ObjectMapper): DemoKafkaService {
-        return DemoKafkaService(properties, objectMapper, kafkaConsumer(), kafkaProducer())
+    fun kafkaService(): DemoKafkaService {
+        return DemoKafkaService(properties, kafkaConsumer(), kafkaProducer())
     }
 
     //    @Bean
     fun kafkaHealthIndicator(): KafkaHealthIndicator {
         log.info { "\nKafkaHealthIndicator created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
 
-        return KafkaHealthIndicator(properties.kafka)
+        return KafkaHealthIndicator(springKafkaProperties, properties.kafka)
     }
 }

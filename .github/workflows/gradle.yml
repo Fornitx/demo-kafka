@@ -1,0 +1,43 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 20
+        
+    - uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: current
+        arguments: |
+          build
+          --show-version
+          --no-daemon
+          -Dkotlin_version=1.9.0
+          -Dkotlin_logging_version=5.0.2
+          -Dspring_version=3.1.2
+          -Dspring_dm_version=1.1.2

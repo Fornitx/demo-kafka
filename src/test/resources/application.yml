@@ -16,24 +16,17 @@ management:
     readinessstate:
       enabled: true
 
-#spring:
-#  kafka:
-#    consumer:
-#      group-id: demo
-#      auto-offset-reset: earliest
-#    bootstrap-servers:
-#
-
+logging:
+  pattern:
+    dateformat: HH:mm:ss.SSSXXX
 
 demo:
   kafka:
-#    bootstrap-servers: ${KAFKA_SERVER}
-#    bootstrap-servers: localhost:9094
-    bootstrap-servers: localhost:9093
-    input-topic: input_topic5
-    output-topic: output_topic
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+    input-topic: in_topic
+    output-topic: out_topic
     health-check-timeout: 10s
     health-check-interval: 10s
     consumer:
       group-id: demo
-      auto-offset-reset: earliest
+#      auto-offset-reset: earliest

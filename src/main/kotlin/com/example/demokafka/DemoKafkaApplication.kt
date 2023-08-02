@@ -1,6 +1,6 @@
 package com.example.demokafka
 
-import com.example.demokafka.kafka.DemoKafkaProperties
+import com.example.demokafka.properties.DemoKafkaProperties
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication

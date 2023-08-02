@@ -1,12 +1,11 @@
-package com.example.demokafka
+package com.example.demokafka.kafka.indicator
 
+import com.example.demokafka.kafka.AbstractKafkaTest
 import org.junit.jupiter.api.Test
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import java.util.concurrent.TimeUnit
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-@AutoConfigureWebTestClient
+@SpringBootTest
 class KafkaHealthIndicatorPerfTest : AbstractKafkaTest() {
     @Test
     fun test() {

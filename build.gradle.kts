@@ -1,19 +1,19 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
-    id("org.springframework.boot") version System.getProperty("springVersion")
-    id("io.spring.dependency-management") version System.getProperty("springDMVersion")
-    kotlin("jvm") version System.getProperty("kotlinVersion")
-    kotlin("plugin.spring") version System.getProperty("kotlinVersion")
+    id("org.springframework.boot") version System.getProperty("spring_version")
+    id("io.spring.dependency-management") version System.getProperty("spring_dm_version")
+    kotlin("jvm") version System.getProperty("kotlin_version")
+    kotlin("plugin.spring") version System.getProperty("kotlin_version")
 }
 
 group = "com.example"
 version = "0.0.1-SNAPSHOT"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_19
-    targetCompatibility = JavaVersion.VERSION_19
-}
-
-extra["testcontainersVersion"] = System.getProperty("testcontainersVersion")
+    sourceCompatibility = JavaVersion.VERSION_20
+    targetCompatibility = JavaVersion.VERSION_20
+} 
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -24,35 +24,29 @@ dependencies {
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
     implementation("org.springframework.kafka:spring-kafka")
     implementation("io.projectreactor.kafka:reactor-kafka")
 
-    implementation("io.github.microutils:kotlin-logging-jvm:3.0.4")
+    implementation("io.github.oshai:kotlin-logging-jvm:${System.getProperty("kotlin_logging_version")}")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
 
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:kafka")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
 }
 
-dependencyManagement {
-    imports {
-        mavenBom("org.testcontainers:testcontainers-bom:${property("testcontainersVersion")}")
-    }
-}
-
-tasks.compileKotlin {
+tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "19"
+        jvmTarget = "20"
     }
 }
 
-tasks.test {
+tasks.withType<Test> {
     useJUnitPlatform()
 }
