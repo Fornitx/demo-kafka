@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 class KafkaHealthIndicatorTest : AbstractKafkaTest() {
     @Autowired
@@ -23,7 +23,8 @@ class KafkaHealthIndicatorTest : AbstractKafkaTest() {
         val body = client.get()
             .uri("/actuator/health")
             .exchange()
-            .expectStatus().isOk
+            .expectStatus()
+            .isOk
             .expectBody<String>()
             .returnResult()
             .responseBody
