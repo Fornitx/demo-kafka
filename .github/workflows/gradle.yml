@@ -28,7 +28,7 @@ jobs:
     - uses: actions/setup-java@v3
       with:
         distribution: temurin
-        java-version: 20
+        java-version: 21
         
     - uses: gradle/gradle-build-action@v2
       with:
@@ -37,7 +37,7 @@ jobs:
           build
           --show-version
           --no-daemon
-          -Dkotlin_version=1.9.0
-          -Dkotlin_logging_version=5.0.2
-          -Dspring_version=3.1.2
-          -Dspring_dm_version=1.1.2
+          -Dkotlin_version=1.9.23
+          -Dkotlin_logging_version=6.0.3
+          -Dspring_version=3.2.4
+          -Dspring_dm_version=1.1.4
