@@ -22,9 +22,6 @@ logging:
 
 demo:
   kafka:
-    bootstrap-servers: ${spring.embedded.kafka.brokers}
-    input-topic: in_topic
-    output-topic: out_topic
     health-check-timeout: 10s
     health-check-interval: 10s
     consumer:

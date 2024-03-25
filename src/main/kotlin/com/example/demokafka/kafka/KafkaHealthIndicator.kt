@@ -1,6 +1,6 @@
 package com.example.demokafka.kafka
 
-import com.example.demokafka.properties.DemoKafkaProperties.MyKafkaProperties
+import com.example.demokafka.properties.MyKafkaProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.common.utils.ThreadUtils
 import org.springframework.beans.factory.DisposableBean
@@ -29,7 +29,7 @@ class KafkaHealthIndicator(
     private fun Health.Builder.withTopic() = this.withDetail("topic", kafka.inputTopic)
 
     init {
-        val consumerProperties = springKafkaProperties.buildConsumerProperties() + kafka.buildConsumerProperties()
+        val consumerProperties = springKafkaProperties.buildConsumerProperties(null) + kafka.buildConsumerProperties(null)
         consumerFactory = DefaultKafkaConsumerFactory<ByteArray, ByteArray>(consumerProperties)
 
         executor = Executors.newSingleThreadScheduledExecutor(ThreadUtils.createThreadFactory("KHI-%d", true))

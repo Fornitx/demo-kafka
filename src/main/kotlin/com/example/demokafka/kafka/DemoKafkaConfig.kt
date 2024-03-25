@@ -1,7 +1,7 @@
 package com.example.demokafka.kafka
 
-import com.example.demokafka.kafka.dto.DemoRequest
-import com.example.demokafka.kafka.dto.DemoResponse
+import com.example.demokafka.kafka.model.DemoRequest
+import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.properties.DemoKafkaProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -27,7 +27,7 @@ class DemoKafkaConfig(
     @Bean
     fun kafkaConsumer(): ReactiveKafkaConsumerTemplate<String, DemoRequest> {
         val consumerProperties =
-            springKafkaProperties.buildConsumerProperties() + properties.kafka.buildConsumerProperties()
+            springKafkaProperties.buildConsumerProperties(null) + properties.kafka.buildConsumerProperties(null)
         val receiverOptions = ReceiverOptions.create<String, DemoRequest>(consumerProperties)
             .withKeyDeserializer(StringDeserializer())
             .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(DemoRequest::class.java).ignoreTypeHeaders()))
@@ -41,19 +41,19 @@ class DemoKafkaConfig(
     @Bean
     fun kafkaProducer(): ReactiveKafkaProducerTemplate<String, DemoResponse> {
         val producerProperties =
-            springKafkaProperties.buildConsumerProperties() + properties.kafka.buildProducerProperties()
+            springKafkaProperties.buildConsumerProperties(null) + properties.kafka.buildProducerProperties(null)
         val senderOptions = SenderOptions.create<String, DemoResponse>(producerProperties)
             .withKeySerializer(StringSerializer())
             .withValueSerializer(JsonSerializer<DemoResponse>().noTypeInfo())
 
-        log.info { "\nKafkaProducer created for topic '${properties.kafka.outputTopic}' on server ${properties.kafka.bootstrapServers}" }
+        log.info { "\nKafkaProducer created on server ${properties.kafka.bootstrapServers}" }
 
         return ReactiveKafkaProducerTemplate(senderOptions)
     }
 
     @Bean
-    fun kafkaService(): DemoKafkaService {
-        return DemoKafkaService(properties, kafkaConsumer(), kafkaProducer())
+    fun kafkaService(metrics: DemoKafkaMetrics): DemoKafkaService {
+        return DemoKafkaService(properties, kafkaConsumer(), kafkaProducer(), metrics)
     }
 
     //    @Bean

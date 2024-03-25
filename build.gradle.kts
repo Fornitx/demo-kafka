@@ -11,8 +11,8 @@ group = "com.example"
 version = "0.0.1-SNAPSHOT"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_20
-    targetCompatibility = JavaVersion.VERSION_20
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 } 
 
 dependencies {
@@ -30,23 +30,34 @@ dependencies {
     implementation("org.springframework.kafka:spring-kafka")
     implementation("io.projectreactor.kafka:reactor-kafka")
 
-    implementation("io.github.oshai:kotlin-logging-jvm:${System.getProperty("kotlin_logging_version")}")
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+
+    implementation("io.github.oshai:kotlin-logging-jvm:" + System.getProperty("kotlin_logging_version"))
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:kafka")
 }
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "20"
+        jvmTarget = "21"
     }
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.jar {
+    enabled = false
 }

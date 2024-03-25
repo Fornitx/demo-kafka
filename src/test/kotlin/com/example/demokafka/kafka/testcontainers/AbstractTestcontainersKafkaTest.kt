@@ -1,6 +1,8 @@
-package com.example.demokafka.kafka
+package com.example.demokafka.kafka.testcontainers
 
-import io.github.oshai.kotlinlogging.KotlinLogging
+import com.example.demokafka.AbstractMetricsTest
+import com.example.demokafka.TestProfiles.TESTCONTAINERS
+import com.example.demokafka.properties.DemoKafkaProperties
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -9,35 +11,28 @@ import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
-import org.springframework.kafka.listener.ContainerProperties
-import org.springframework.kafka.listener.KafkaMessageListenerContainer
-import org.springframework.kafka.requestreply.ReplyingKafkaTemplate
 import org.springframework.kafka.support.SendResult
-import org.springframework.kafka.test.EmbeddedKafkaBroker
-import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
-import kotlin.reflect.jvm.jvmName
 
-const val IN_TOPIC = "in_topic"
-const val OUT_TOPIC = "out_topic"
+internal const val IN_TC_TOPIC = "in_tc_topic"
+internal const val OUT_TC_TOPIC = "out_tc_topic"
 
-@EmbeddedKafka(partitions = 1, topics = [IN_TOPIC, OUT_TOPIC])
+@ActiveProfiles(TESTCONTAINERS)
 @DirtiesContext
-abstract class AbstractKafkaTest {
-    @Autowired
-    protected lateinit var embeddedKafkaBroker: EmbeddedKafkaBroker
+internal abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
+    protected val kafkaContainer = TestcontainersHelper.kafkaContainer
 
-    protected val log = KotlinLogging.logger(this::class.jvmName)
+    protected lateinit var properties: DemoKafkaProperties
 
     private val producerFactory by lazy {
         DefaultKafkaProducerFactory(
-            mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to embeddedKafkaBroker.brokersAsString),
+            mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers),
             StringSerializer(),
             StringSerializer(),
         )
@@ -46,9 +41,9 @@ abstract class AbstractKafkaTest {
     private val consumerFactory by lazy {
         DefaultKafkaConsumerFactory(
             mapOf(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to embeddedKafkaBroker.brokersAsString,
-                ConsumerConfig.GROUP_ID_CONFIG to AbstractKafkaTest::class.simpleName,
-//                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG to AbstractTestcontainersKafkaTest::class.simpleName,
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
             ),
             StringDeserializer(),
             StringDeserializer(),
@@ -59,18 +54,18 @@ abstract class AbstractKafkaTest {
         KafkaTemplate(producerFactory)
     }
 
-    protected val replyingTemplate: ReplyingKafkaTemplate<String, String, String> by lazy {
-        ReplyingKafkaTemplate(
-            producerFactory,
-            KafkaMessageListenerContainer(consumerFactory, ContainerProperties(IN_TOPIC).apply {
-                setGroupId(AbstractKafkaTest::class.simpleName!!)
-            })
-        )
-    }
+//    protected val replyingTemplate: ReplyingKafkaTemplate<String, String, String> by lazy {
+//        ReplyingKafkaTemplate(
+//            producerFactory,
+//            KafkaMessageListenerContainer(consumerFactory, ContainerProperties(IN_TOPIC).apply {
+//                setGroupId(AbstractKafkaTest::class.simpleName!!)
+//            })
+//        )
+//    }
 
     protected fun produce(
+        topic: String,
         data: String,
-        topic: String = IN_TOPIC,
         headers: Map<String, String>? = null,
     ): SendResult<String, String> = template.send(
         ProducerRecord(topic, null, null, null, data, headers?.let {

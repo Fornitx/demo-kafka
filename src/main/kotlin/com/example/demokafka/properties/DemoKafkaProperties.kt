@@ -8,10 +8,11 @@ const val PREFIX = "demo"
 
 @ConfigurationProperties(PREFIX, ignoreUnknownFields = false)
 data class DemoKafkaProperties(val kafka: MyKafkaProperties) {
-    class MyKafkaProperties : KafkaProperties() {
-        lateinit var inputTopic: String
-        lateinit var outputTopic: String
-        var healthCheckInterval: Duration? = null
-        var healthCheckTimeout: Duration? = null
-    }
+}
+
+class MyKafkaProperties : KafkaProperties() {
+    lateinit var inputTopic: String
+    //        lateinit var outputTopic: String
+    var healthCheckInterval: Duration? = null
+    var healthCheckTimeout: Duration? = null
 }
