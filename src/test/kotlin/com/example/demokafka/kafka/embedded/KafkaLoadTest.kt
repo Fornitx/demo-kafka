@@ -1,4 +1,4 @@
-package com.example.demokafka.kafka.testcontainers
+package com.example.demokafka.kafka.embedded
 
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.utils.Constants.RQID
@@ -11,7 +11,7 @@ import java.util.*
 import kotlin.test.assertEquals
 
 @SpringBootTest
-internal class KafkaLoadTest : AbstractTestcontainersKafkaTest() {
+internal class KafkaLoadTest : AbstractEmbeddedKafkaTest() {
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper

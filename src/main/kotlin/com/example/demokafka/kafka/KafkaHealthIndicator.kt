@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.kafka.KafkaProperties
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
@@ -21,6 +22,7 @@ class KafkaHealthIndicator(
 ) : HealthIndicator, DisposableBean {
     private val consumerFactory: DefaultKafkaConsumerFactory<ByteArray, ByteArray>
     private val executor: ScheduledExecutorService
+    private val future: ScheduledFuture<*>
 
     private val healthRef = AtomicReference(Health.unknown().withTopic().build())
     private val healthUp = Health.up().withTopic().build()
@@ -29,11 +31,12 @@ class KafkaHealthIndicator(
     private fun Health.Builder.withTopic() = this.withDetail("topic", kafka.inputTopic)
 
     init {
-        val consumerProperties = springKafkaProperties.buildConsumerProperties(null) + kafka.buildConsumerProperties(null)
+        val consumerProperties =
+            springKafkaProperties.buildConsumerProperties(null) + kafka.buildConsumerProperties(null)
         consumerFactory = DefaultKafkaConsumerFactory<ByteArray, ByteArray>(consumerProperties)
 
         executor = Executors.newSingleThreadScheduledExecutor(ThreadUtils.createThreadFactory("KHI-%d", true))
-        executor.scheduleWithFixedDelay({
+        future = executor.scheduleWithFixedDelay({
             try {
                 consumerFactory.createConsumer().use { it.partitionsFor(kafka.inputTopic, kafka.healthCheckTimeout) }
                 healthRef.set(healthUp)
@@ -45,10 +48,14 @@ class KafkaHealthIndicator(
     }
 
     override fun health(): Health {
+        if (future.isDone || future.isCancelled) {
+            return healthDown
+        }
         return healthRef.get()
     }
 
     override fun destroy() {
+        future.cancel(true)
         executor.shutdown()
     }
 }

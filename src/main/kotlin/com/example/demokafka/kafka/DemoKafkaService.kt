@@ -5,6 +5,7 @@ import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.properties.DemoKafkaProperties
 import com.example.demokafka.utils.Constants.RQID
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.mono
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -21,6 +22,8 @@ import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.kafka.support.serializer.SerializationUtils
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 
 private val log = KotlinLogging.logger { }
 
@@ -32,8 +35,30 @@ class DemoKafkaService(
 ) : DisposableBean {
     private var subscription: Disposable? = null
 
+    private var timestamp: AtomicLong = AtomicLong(0)
+
     @EventListener(ApplicationReadyEvent::class)
     fun ready() {
+        if (!properties.kafka.enabled) {
+            return
+        }
+
+//        val (beginningOffsets, endOffsets) = consumerFactory.createConsumer().use { consumer ->
+//            val partitionInfos = consumer.partitionsFor(properties.kafka.inputTopic)
+//            val topicPartitions = partitionInfos.map { TopicPartition(it.topic(), it.partition()) }
+//
+//            val beginningOffsets = consumer.beginningOffsets(topicPartitions)
+//            val endOffsets = consumer.endOffsets(topicPartitions)
+//            consumer.assign(topicPartitions)
+//            val positions = topicPartitions.map { it to consumer.position(it) }
+//
+//            log.info("beginningOffsets = {}", beginningOffsets)
+//            log.info("endOffsets = {}", endOffsets)
+//            log.info("positions = {}", positions)
+//
+//            beginningOffsets to endOffsets
+//        }
+
         subscription = Flux.defer {
             consumer.receiveAutoAck()
                 .doOnSubscribe {
@@ -42,6 +67,8 @@ class DemoKafkaService(
                 .concatMap {
                     mono {
                         try {
+                            timestamp.set(it.timestamp())
+                            delay(1000)
                             processRecord(it)
                         } catch (ex: Exception) {
                             log.error(ex) { "Unexpected error in Kafka consumer!!!" }
@@ -49,8 +76,14 @@ class DemoKafkaService(
                     }
                 }
         }
-//            .retry()
+            .retry()
             .subscribe()
+
+        Flux.interval(Duration.ofSeconds(5))
+            .map { timestamp.get() }
+            .buffer(2, 1)
+            .takeWhile { it == listOf(0, 0) || it[0] != it[1] }
+            .blockLast()
     }
 
     private suspend fun processRecord(record: ConsumerRecord<String, DemoRequest>) {

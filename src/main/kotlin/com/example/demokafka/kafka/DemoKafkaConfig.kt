@@ -4,11 +4,15 @@ import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.properties.DemoKafkaProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.apache.kafka.clients.admin.AdminClientConfig
+import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.kafka.config.TopicBuilder
+import org.springframework.kafka.core.KafkaAdmin
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
@@ -25,6 +29,16 @@ class DemoKafkaConfig(
     private val properties: DemoKafkaProperties
 ) {
     @Bean
+    fun kafkaAdmin(): KafkaAdmin =
+        KafkaAdmin(mapOf(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to properties.kafka.bootstrapServers))
+
+    @Bean
+    fun inTopic(): NewTopic = TopicBuilder.name(properties.kafka.inputTopic).partitions(4).build()
+
+    @Bean
+    fun outTopic(): NewTopic = TopicBuilder.name(properties.kafka.outputTopic).partitions(1).build()
+
+    @Bean
     fun kafkaConsumer(): ReactiveKafkaConsumerTemplate<String, DemoRequest> {
         val consumerProperties =
             springKafkaProperties.buildConsumerProperties(null) + properties.kafka.buildConsumerProperties(null)
@@ -33,7 +47,7 @@ class DemoKafkaConfig(
             .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(DemoRequest::class.java).ignoreTypeHeaders()))
             .subscription(listOf(properties.kafka.inputTopic))
 
-        log.info { "\nKafkaConsumer created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
+        log.info { "KafkaConsumer created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
 
         return ReactiveKafkaConsumerTemplate(receiverOptions)
     }
@@ -46,7 +60,7 @@ class DemoKafkaConfig(
             .withKeySerializer(StringSerializer())
             .withValueSerializer(JsonSerializer<DemoResponse>().noTypeInfo())
 
-        log.info { "\nKafkaProducer created on server ${properties.kafka.bootstrapServers}" }
+        log.info { "KafkaProducer created on server ${properties.kafka.bootstrapServers}" }
 
         return ReactiveKafkaProducerTemplate(senderOptions)
     }
@@ -58,7 +72,7 @@ class DemoKafkaConfig(
 
     //    @Bean
     fun kafkaHealthIndicator(): KafkaHealthIndicator {
-        log.info { "\nKafkaHealthIndicator created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
+        log.info { "KafkaHealthIndicator created for topic '${properties.kafka.inputTopic}' on server ${properties.kafka.bootstrapServers}" }
 
         return KafkaHealthIndicator(springKafkaProperties, properties.kafka)
     }

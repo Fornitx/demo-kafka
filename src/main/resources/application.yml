@@ -18,7 +18,7 @@ management:
 
 logging:
   pattern:
-    dateformat: HH:mm:ss.SSS
+    dateformat: HH:mm:ss.SSSXXX
 
 demo:
   kafka:

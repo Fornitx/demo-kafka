@@ -1,5 +1,5 @@
 demo:
   kafka:
     bootstrap-servers: ${spring.embedded.kafka.brokers}
-    input-topic: in_topic
-    #    output-topic: out_topic
+    input-topic: in_em_topic
+    output-topic: out_em_topic

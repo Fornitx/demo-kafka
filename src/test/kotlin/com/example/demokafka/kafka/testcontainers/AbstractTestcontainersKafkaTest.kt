@@ -11,6 +11,7 @@ import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
@@ -20,14 +21,12 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
 
-internal const val IN_TC_TOPIC = "in_tc_topic"
-internal const val OUT_TC_TOPIC = "out_tc_topic"
-
 @ActiveProfiles(TESTCONTAINERS)
 @DirtiesContext
-internal abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
+abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
     protected val kafkaContainer = TestcontainersHelper.kafkaContainer
 
+    @Autowired
     protected lateinit var properties: DemoKafkaProperties
 
     private val producerFactory by lazy {

@@ -11,8 +11,9 @@ data class DemoKafkaProperties(val kafka: MyKafkaProperties) {
 }
 
 class MyKafkaProperties : KafkaProperties() {
+    var enabled: Boolean = true
     lateinit var inputTopic: String
-    //        lateinit var outputTopic: String
+    lateinit var outputTopic: String
     var healthCheckInterval: Duration? = null
     var healthCheckTimeout: Duration? = null
 }

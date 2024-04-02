@@ -2,4 +2,4 @@ demo:
   kafka:
     bootstrap-servers: ${TC_KAFKA}
     input-topic: in_tc_topic
-    #    output-topic: out_tc_topic
+    output-topic: out_tc_topic

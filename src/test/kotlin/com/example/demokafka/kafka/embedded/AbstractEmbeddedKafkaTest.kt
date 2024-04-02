@@ -26,10 +26,7 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
 
-internal const val IN_TOPIC = "in_topic"
-internal const val OUT_TOPIC = "out_topic"
-
-@EmbeddedKafka(partitions = 1, topics = [IN_TOPIC, OUT_TOPIC])
+@EmbeddedKafka
 @ActiveProfiles(TestProfiles.EMBEDDED)
 @DirtiesContext
 internal abstract class AbstractEmbeddedKafkaTest : AbstractMetricsTest() {
