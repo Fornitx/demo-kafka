@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     id("org.springframework.boot") version System.getProperty("spring_version")
     id("io.spring.dependency-management") version System.getProperty("spring_dm_version")
@@ -11,9 +9,12 @@ group = "com.example"
 version = "0.0.1-SNAPSHOT"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-} 
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+ext["kotlin-coroutines.version"] = System.getProperty("kotlin_coroutines_version")
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -47,10 +48,9 @@ dependencies {
     testImplementation("org.testcontainers:kafka")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "21"
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict")
     }
 }
 
