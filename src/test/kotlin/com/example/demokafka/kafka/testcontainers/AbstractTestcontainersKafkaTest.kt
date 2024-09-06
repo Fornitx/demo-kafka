@@ -2,32 +2,27 @@ package com.example.demokafka.kafka.testcontainers
 
 import com.example.demokafka.AbstractMetricsTest
 import com.example.demokafka.TestProfiles.TESTCONTAINERS
-import com.example.demokafka.properties.DemoKafkaProperties
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
-import org.springframework.kafka.core.KafkaTemplate
-import org.springframework.kafka.support.SendResult
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 @ActiveProfiles(TESTCONTAINERS)
 @DirtiesContext
 abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
     protected val kafkaContainer = TestcontainersHelper.kafkaContainer
-
-    @Autowired
-    protected lateinit var properties: DemoKafkaProperties
 
     private val producerFactory by lazy {
         DefaultKafkaProducerFactory(
@@ -49,9 +44,9 @@ abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
         )
     }
 
-    private val template: KafkaTemplate<String, String> by lazy {
-        KafkaTemplate(producerFactory)
-    }
+//    private val template: KafkaTemplate<String, String> by lazy {
+//        KafkaTemplate(producerFactory)
+//    }
 
 //    protected val replyingTemplate: ReplyingKafkaTemplate<String, String, String> by lazy {
 //        ReplyingKafkaTemplate(
@@ -66,11 +61,15 @@ abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
         topic: String,
         data: String,
         headers: Map<String, String>? = null,
-    ): SendResult<String, String> = template.send(
-        ProducerRecord(topic, null, null, null, data, headers?.let {
+        timeout: Long = 5,
+        unit: TimeUnit = TimeUnit.SECONDS,
+    ): RecordMetadata = producerFactory.createProducer().use { producer ->
+        val recordHeaders = headers?.let {
             RecordHeaders(it.map { (key, value) -> RecordHeader(key, value.toByteArray()) })
-        })
-    ).get()
+        }
+        val record = ProducerRecord(topic, null, null, null as String?, data, recordHeaders)
+        producer.send(record).get(timeout, unit)
+    }
 
     protected fun consume(
         topic: String,

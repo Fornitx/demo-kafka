@@ -1,5 +1,13 @@
 demo:
-  kafka:
+  in-out-kafka:
     bootstrap-servers: ${spring.embedded.kafka.brokers}
-    input-topic: in_em_topic
-    output-topic: out_em_topic
+    input-topic: in_out_in_topic_em
+    output-topic: in_out_out_topic_em
+    health:
+      topic: health_topic_em
+  out-in-kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+    input-topic: out_in_in_topic_em
+    output-topic: out_in_out_topic_em
+    health:
+      topic: health_topic_em

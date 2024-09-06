@@ -1,8 +1,8 @@
 plugins {
-    id("org.springframework.boot") version System.getProperty("spring_version")
-    id("io.spring.dependency-management") version System.getProperty("spring_dm_version")
-    kotlin("jvm") version System.getProperty("kotlin_version")
-    kotlin("plugin.spring") version System.getProperty("kotlin_version")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+    kotlin("jvm")
+    kotlin("plugin.spring")
 }
 
 group = "com.example"
@@ -25,13 +25,10 @@ dependencies {
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
     implementation("org.springframework.kafka:spring-kafka")
     implementation("io.projectreactor.kafka:reactor-kafka")
-
-    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
     implementation("io.github.oshai:kotlin-logging-jvm:" + System.getProperty("kotlin_logging_version"))
 

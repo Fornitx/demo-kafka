@@ -21,13 +21,25 @@ logging:
     dateformat: HH:mm:ss.SSS
 
 demo:
-  kafka:
-    enabled: true
-    bootstrap-servers: localhost:9093
-    input-topic: in_topic
-    output-topic: out_topic
-    health-check-timeout: 10s
-    health-check-interval: 10s
+  in-out-kafka:
+    enabled: false
+#    bootstrap-servers: localhost:9093
+#    input-topic: in_out_in_topic
+#    output-topic: in_out_out_topic
     consumer:
       group-id: demo
       auto-offset-reset: earliest
+    health:
+      enabled: false
+#      topic: health_topic
+  out-in-kafka:
+    enabled: false
+#    bootstrap-servers: localhost:9093
+#    input-topic: out_in_in_topic
+#    output-topic: out_in_out_topic
+    consumer:
+      group-id: demo
+      auto-offset-reset: earliest
+    health:
+      enabled: false
+#      topic: health_topic

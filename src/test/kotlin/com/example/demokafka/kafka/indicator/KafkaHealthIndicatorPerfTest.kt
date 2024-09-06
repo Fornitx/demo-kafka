@@ -1,11 +1,5 @@
 package com.example.demokafka.kafka.indicator
 
-import com.example.demokafka.kafka.embedded.AbstractEmbeddedKafkaTest
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
-import java.util.concurrent.TimeUnit
-
 //@SpringBootTest
 //@Disabled
 //class KafkaHealthIndicatorPerfTest : AbstractEmbeddedKafkaTest() {

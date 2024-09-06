@@ -1,5 +1,13 @@
 demo:
-  kafka:
+  in-out-kafka:
     bootstrap-servers: ${TC_KAFKA}
-    input-topic: in_tc_topic
-    output-topic: out_tc_topic
+    input-topic: in_out_in_topic_tc
+    output-topic: in_out_out_topic_tc
+    health:
+      topic: health_topic_tc
+  out-in-kafka:
+    bootstrap-servers: ${TC_KAFKA}
+    input-topic: out_in_in_topic_tc
+    output-topic: out_in_out_topic_tc
+    health:
+      topic: health_topic_tc

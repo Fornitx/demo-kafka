@@ -1,7 +1,9 @@
-package com.example.demokafka.kafka.testcontainers
+package com.example.demokafka.kafka.testcontainers.inout
 
+import com.example.demokafka.TestProfiles
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
+import com.example.demokafka.kafka.testcontainers.AbstractTestcontainersKafkaTest
 import com.example.demokafka.utils.Constants.RQID
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -9,11 +11,13 @@ import org.junit.jupiter.api.RepeatedTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.kafka.support.KafkaHeaders
+import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import kotlin.test.assertEquals
 
 @SpringBootTest
-internal class KafkaRepeated2Test : AbstractTestcontainersKafkaTest() {
+@ActiveProfiles(TestProfiles.IN_OUT)
+class KafkaRepeated1Test : AbstractTestcontainersKafkaTest() {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
@@ -22,16 +26,16 @@ internal class KafkaRepeated2Test : AbstractTestcontainersKafkaTest() {
         val requestId = UUID.randomUUID().toString()
 
         val sendResult = produce(
-            properties.kafka.inputTopic,
+            properties.inOutKafka.inputTopic,
             objectMapper.writeValueAsString(DemoRequest("Abc")),
             headers = mapOf(
                 RQID to requestId,
-                KafkaHeaders.REPLY_TOPIC to properties.kafka.outputTopic,
+                KafkaHeaders.REPLY_TOPIC to properties.inOutKafka.outputTopic,
             )
         )
         log.info { "Sent $sendResult" }
 
-        val records = consume(properties.kafka.outputTopic)
+        val records = consume(properties.inOutKafka.outputTopic)
         assertEquals(1, records.count())
 
         val record = records.first()
