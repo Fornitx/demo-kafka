@@ -1,9 +1,9 @@
-package com.example.demokafka.kafka.testcontainers.inout
+package com.example.demokafka.kafka.testcontainers.tcnew.inout
 
 import com.example.demokafka.TestProfiles
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
-import com.example.demokafka.kafka.testcontainers.AbstractTestcontainersKafkaTest
+import com.example.demokafka.kafka.testcontainers.tcnew.AbstractNewTestcontainersKafkaTest
 import com.example.demokafka.utils.Constants.RQID
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 
 @SpringBootTest
 @ActiveProfiles(TestProfiles.IN_OUT)
-class KafkaRepeated2Test : AbstractTestcontainersKafkaTest() {
+class NewRepeated1Test : AbstractNewTestcontainersKafkaTest() {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 

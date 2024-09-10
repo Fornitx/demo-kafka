@@ -1,4 +1,4 @@
-package com.example.demokafka.kafka.indicator
+package com.example.demokafka.kafka.embedded.indicator
 
 //@SpringBootTest
 //@Disabled

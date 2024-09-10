@@ -1,7 +1,6 @@
-package com.example.demokafka.kafka.testcontainers
+package com.example.demokafka.kafka
 
 import com.example.demokafka.AbstractMetricsTest
-import com.example.demokafka.TestProfiles.TESTCONTAINERS
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -14,19 +13,15 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.test.utils.KafkaTestUtils
-import org.springframework.test.annotation.DirtiesContext
-import org.springframework.test.context.ActiveProfiles
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
-@ActiveProfiles(TESTCONTAINERS)
-@DirtiesContext
-abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
-    protected val kafkaContainer = TestcontainersHelper.kafkaContainer
+abstract class AbstractKafkaTest : AbstractMetricsTest() {
+    protected abstract val bootstrapServers: String
 
     private val producerFactory by lazy {
         DefaultKafkaProducerFactory(
-            mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers),
+            mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers),
             StringSerializer(),
             StringSerializer(),
         )
@@ -35,8 +30,8 @@ abstract class AbstractTestcontainersKafkaTest : AbstractMetricsTest() {
     private val consumerFactory by lazy {
         DefaultKafkaConsumerFactory(
             mapOf(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers,
-                ConsumerConfig.GROUP_ID_CONFIG to AbstractTestcontainersKafkaTest::class.simpleName,
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG to AbstractKafkaTest::class.simpleName,
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
             ),
             StringDeserializer(),

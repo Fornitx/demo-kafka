@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 
 @SpringBootTest
 @ActiveProfiles(TestProfiles.IN_OUT)
-class KafkaRepeated2Test : AbstractEmbeddedKafkaTest() {
+class EmbRepeated2Test : AbstractEmbeddedKafkaTest() {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 

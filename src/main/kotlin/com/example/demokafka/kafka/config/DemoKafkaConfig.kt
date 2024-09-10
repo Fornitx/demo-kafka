@@ -10,20 +10,16 @@ import com.example.demokafka.properties.CustomKafkaProperties
 import com.example.demokafka.properties.DemoKafkaProperties
 import com.example.demokafka.properties.PREFIX
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.common.serialization.LongSerializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.boot.actuate.health.ReactiveHealthIndicator
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.kafka.config.TopicBuilder
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
-import org.springframework.kafka.core.KafkaAdmin
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
 import org.springframework.kafka.listener.ContainerProperties
@@ -47,15 +43,15 @@ class DemoKafkaConfig(
     inner class InOutConfig {
         private val kafkaProperties = properties.inOutKafka
 
-        @ConditionalOnMissingBean
-        @Bean
-        fun kafkaAdmin(): KafkaAdmin = newKafkaAdmin(springKafkaProperties, kafkaProperties)
-
-        @Bean
-        fun inTopic1(): NewTopic = newTopic(kafkaProperties.inputTopic, 4)
-
-        @Bean
-        fun outTopic1(): NewTopic = newTopic(kafkaProperties.outputTopic)
+//        @ConditionalOnMissingBean
+//        @Bean
+//        fun kafkaAdmin(): KafkaAdmin = newKafkaAdmin(springKafkaProperties, kafkaProperties)
+//
+//        @Bean
+//        fun inTopic1(): NewTopic = newTopic(kafkaProperties.inputTopic, 4)
+//
+//        @Bean
+//        fun outTopic1(): NewTopic = newTopic(kafkaProperties.outputTopic)
 
         @Bean
         fun kafkaConsumer1(): ReactiveKafkaConsumerTemplate<String, DemoRequest> =
@@ -75,8 +71,8 @@ class DemoKafkaConfig(
         @ConditionalOnProperty("$PREFIX.in-out-kafka.health.enabled", havingValue = "true", matchIfMissing = false)
         @Configuration
         inner class InOutHealthConfig {
-            @Bean
-            fun healthCheckTopic1(): NewTopic = newTopic(kafkaProperties.health.topic)
+//            @Bean
+//            fun healthCheckTopic1(): NewTopic = newTopic(kafkaProperties.health.topic)
 
             @Bean
             fun kafkaHealthIndicator1(): ReactiveHealthIndicator =
@@ -89,15 +85,15 @@ class DemoKafkaConfig(
     inner class OutInConfig {
         private val kafkaProperties = properties.outInKafka
 
-        @ConditionalOnMissingBean
-        @Bean
-        fun kafkaAdmin(): KafkaAdmin = newKafkaAdmin(springKafkaProperties, kafkaProperties)
-
-        @Bean
-        fun inTopic2(): NewTopic = newTopic(kafkaProperties.inputTopic, 4)
-
-        @Bean
-        fun outTopic2(): NewTopic = newTopic(kafkaProperties.outputTopic)
+//        @ConditionalOnMissingBean
+//        @Bean
+//        fun kafkaAdmin(): KafkaAdmin = newKafkaAdmin(springKafkaProperties, kafkaProperties)
+//
+//        @Bean
+//        fun inTopic2(): NewTopic = newTopic(kafkaProperties.inputTopic, 4)
+//
+//        @Bean
+//        fun outTopic2(): NewTopic = newTopic(kafkaProperties.outputTopic)
 
         @Bean
         fun replyingKafkaTemplate2(): ReplyingKafkaTemplate<String, DemoRequest, DemoResponse> {
@@ -122,8 +118,8 @@ class DemoKafkaConfig(
         @ConditionalOnProperty("$PREFIX.out-in-kafka.health.enabled", havingValue = "true", matchIfMissing = false)
         @Configuration
         inner class OutInHealthConfig {
-            @Bean
-            fun healthCheckTopic2(): NewTopic = newTopic(kafkaProperties.health.topic)
+//            @Bean
+//            fun healthCheckTopic2(): NewTopic = newTopic(kafkaProperties.health.topic)
 
             @Bean
             fun kafkaHealthIndicator2(): ReactiveHealthIndicator =
@@ -132,20 +128,20 @@ class DemoKafkaConfig(
     }
 
     companion object {
-        private fun newKafkaAdmin(
-            springKafkaProperties: KafkaProperties,
-            customKafkaProperties: CustomKafkaProperties,
-        ): KafkaAdmin {
-            log.info { "KafkaAdmin created" }
-            return KafkaAdmin(
-                springKafkaProperties.buildAdminProperties(null) + customKafkaProperties.buildAdminProperties(null)
-            )
-        }
-
-        private fun newTopic(name: String, partitions: Int = 1): NewTopic {
-            log.info { "Topic $name created" }
-            return TopicBuilder.name(name).partitions(partitions).build()
-        }
+//        private fun newKafkaAdmin(
+//            springKafkaProperties: KafkaProperties,
+//            customKafkaProperties: CustomKafkaProperties,
+//        ): KafkaAdmin {
+//            log.info { "KafkaAdmin created" }
+//            return KafkaAdmin(
+//                springKafkaProperties.buildAdminProperties(null) + customKafkaProperties.buildAdminProperties(null)
+//            )
+//        }
+//
+//        private fun newTopic(name: String, partitions: Int = 1): NewTopic {
+//            log.info { "Topic $name created" }
+//            return TopicBuilder.name(name).partitions(partitions).build()
+//        }
 
         private inline fun <reified T> newKafkaConsumer(
             springKafkaProperties: KafkaProperties,

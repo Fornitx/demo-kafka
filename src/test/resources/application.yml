@@ -20,15 +20,18 @@ logging:
   pattern:
     dateformat: HH:mm:ss.SSS
 
+spring:
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+      group-id: demo
+
 demo:
   in-out-kafka:
     enabled: false
 #    bootstrap-servers: localhost:9093
 #    input-topic: in_out_in_topic
 #    output-topic: in_out_out_topic
-    consumer:
-      group-id: demo
-      auto-offset-reset: earliest
     health:
       enabled: false
 #      topic: health_topic
@@ -37,9 +40,6 @@ demo:
 #    bootstrap-servers: localhost:9093
 #    input-topic: out_in_in_topic
 #    output-topic: out_in_out_topic
-    consumer:
-      group-id: demo
-      auto-offset-reset: earliest
     health:
       enabled: false
 #      topic: health_topic
