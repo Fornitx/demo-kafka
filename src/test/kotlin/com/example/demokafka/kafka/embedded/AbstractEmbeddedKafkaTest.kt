@@ -7,7 +7,7 @@ import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.context.ActiveProfiles
 
-@EmbeddedKafka
+@EmbeddedKafka(kraft = true)
 @ActiveProfiles(TestProfiles.EMBEDDED)
 abstract class AbstractEmbeddedKafkaTest : AbstractKafkaTest() {
     override val bootstrapServers: String
