@@ -12,6 +12,7 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
+import org.springframework.kafka.support.KafkaUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import java.time.Duration
 import java.util.concurrent.TimeUnit
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit
 abstract class AbstractKafkaTest : AbstractMetricsTest() {
     protected abstract val bootstrapServers: String
 
-    private val producerFactory by lazy {
+    protected val producerFactory by lazy {
         DefaultKafkaProducerFactory(
             mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers),
             StringSerializer(),
@@ -63,7 +64,9 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
             RecordHeaders(it.map { (key, value) -> RecordHeader(key, value.toByteArray()) })
         }
         val record = ProducerRecord(topic, null, null, null as String?, data, recordHeaders)
-        producer.send(record).get(timeout, unit)
+        producer.send(record).get(timeout, unit).also { recordMetadata ->
+            log.debug { "Sent ${KafkaUtils.format(record)} as $recordMetadata" }
+        }
     }
 
     protected fun consume(

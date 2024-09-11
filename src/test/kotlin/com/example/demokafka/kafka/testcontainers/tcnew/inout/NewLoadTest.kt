@@ -5,6 +5,9 @@ import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.testcontainers.tcnew.AbstractNewTestcontainersKafkaTest
 import com.example.demokafka.utils.Constants.RQID
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.header.internals.RecordHeader
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.junit.jupiter.api.RepeatedTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -23,15 +26,27 @@ class NewLoadTest : AbstractNewTestcontainersKafkaTest() {
     fun test() {
         val requestId = UUID.randomUUID().toString()
 
-        repeat(100) {
-            produce(
-                properties.inOutKafka.inputTopic,
-                objectMapper.writeValueAsString(DemoRequest("Abc")),
-                headers = mapOf(
-                    RQID to requestId,
-                    KafkaHeaders.REPLY_TOPIC to properties.inOutKafka.outputTopic,
+        producerFactory.createProducer().use { producer ->
+            repeat(100) {
+                producer.send(
+                    ProducerRecord(
+                        properties.inOutKafka.inputTopic,
+                        null,
+                        null,
+                        null,
+                        objectMapper.writeValueAsString(DemoRequest("Abc")),
+                        RecordHeaders(
+                            listOf(
+                                RecordHeader(RQID, requestId.toByteArray(Charsets.UTF_8)),
+                                RecordHeader(
+                                    KafkaHeaders.REPLY_TOPIC,
+                                    properties.inOutKafka.outputTopic.toByteArray(Charsets.UTF_8)
+                                ),
+                            )
+                        ),
+                    )
                 )
-            )
+            }
         }
 
         val records = consume(properties.inOutKafka.outputTopic, minRecords = 100)
