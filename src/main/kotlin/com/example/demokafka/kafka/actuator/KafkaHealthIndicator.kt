@@ -1,14 +1,11 @@
 package com.example.demokafka.kafka.actuator
 
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.boot.actuate.health.Health
 import org.springframework.boot.actuate.health.ReactiveHealthIndicator
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
 import reactor.core.publisher.Mono
 import reactor.kafka.sender.SenderOptions
-
-private val log = KotlinLogging.logger {}
 
 class KafkaHealthIndicator(
     senderOptions: SenderOptions<Long, Long>,
@@ -21,17 +18,17 @@ class KafkaHealthIndicator(
         return producer.send(topic, millis, millis).map { senderResult ->
             val exception = senderResult.exception()
             if (exception != null) {
-                Health.down().withTopic().withError(exception.message).build()
+                Health.down().withTopic(topic).withError(exception.message).build()
             } else {
-                Health.up().withTopic().build()
+                Health.up().withTopic(topic).build()
             }
         }.onErrorResume { throwable ->
-            Mono.just(Health.down().withTopic().withError(throwable.message).build())
+            Mono.just(Health.down().withTopic(topic).withError(throwable.message).build())
         }
     }
 
     override fun destroy() = producer.destroy()
 
-    private fun Health.Builder.withTopic() = this.withDetail("topic", topic)
-    private fun Health.Builder.withError(msg: String?) = this.withDetail("error", msg)
+    private fun Health.Builder.withTopic(topic: String): Health.Builder = this.withDetail("topic", topic)
+    private fun Health.Builder.withError(msg: String?): Health.Builder = this.withDetail("error", msg)
 }

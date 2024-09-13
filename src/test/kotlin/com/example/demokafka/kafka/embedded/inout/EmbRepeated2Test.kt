@@ -5,6 +5,7 @@ import com.example.demokafka.kafka.embedded.AbstractEmbeddedKafkaTest
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.utils.Constants.RQID
+import com.example.demokafka.utils.headers
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.junit.jupiter.api.RepeatedTest
@@ -28,7 +29,7 @@ class EmbRepeated2Test : AbstractEmbeddedKafkaTest() {
         val sendResult = produce(
             properties.inOutKafka.inputTopic,
             objectMapper.writeValueAsString(DemoRequest("Abc")),
-            headers = mapOf(
+            headers = headers(
                 RQID to requestId,
                 KafkaHeaders.REPLY_TOPIC to properties.inOutKafka.outputTopic,
             )

@@ -6,8 +6,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.apache.kafka.common.header.internals.RecordHeader
-import org.apache.kafka.common.header.internals.RecordHeaders
+import org.apache.kafka.common.header.Header
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
@@ -56,15 +55,11 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
     protected fun produce(
         topic: String,
         data: String,
-        headers: Map<String, String>? = null,
-        timeout: Long = 5,
-        unit: TimeUnit = TimeUnit.SECONDS,
+        headers: Iterable<Header>? = null,
+        timeout: Duration = Duration.ofSeconds(5),
     ): RecordMetadata = producerFactory.createProducer().use { producer ->
-        val recordHeaders = headers?.let {
-            RecordHeaders(it.map { (key, value) -> RecordHeader(key, value.toByteArray()) })
-        }
-        val record = ProducerRecord(topic, null, null, null as String?, data, recordHeaders)
-        producer.send(record).get(timeout, unit).also { recordMetadata ->
+        val record = ProducerRecord(topic, null, null, null as String?, data, headers)
+        producer.send(record).get(timeout.toMillis(), TimeUnit.MILLISECONDS).also { recordMetadata ->
             log.debug { "Sent ${KafkaUtils.format(record)} as $recordMetadata" }
         }
     }
