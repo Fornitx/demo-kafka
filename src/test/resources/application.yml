@@ -27,19 +27,13 @@ spring:
       group-id: demo
 
 demo:
-  in-out-kafka:
-    enabled: false
-#    bootstrap-servers: localhost:9093
-#    input-topic: in_out_in_topic
-#    output-topic: in_out_out_topic
-    health:
+  kafka:
+    in-out:
       enabled: false
-#      topic: health_topic
-  out-in-kafka:
-    enabled: false
-#    bootstrap-servers: localhost:9093
-#    input-topic: out_in_in_topic
-#    output-topic: out_in_out_topic
-    health:
+      health:
+        enabled: false
+    out-in:
       enabled: false
-#      topic: health_topic
+      health:
+        enabled: false
+    out-in-timeout: 5s

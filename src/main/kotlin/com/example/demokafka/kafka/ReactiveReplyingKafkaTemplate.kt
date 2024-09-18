@@ -24,6 +24,7 @@ import org.springframework.util.Assert
 import reactor.core.Disposable
 import reactor.core.publisher.Mono
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.Volatile
 import kotlin.random.Random
@@ -35,7 +36,7 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
     private val producer: ReactiveKafkaProducerTemplate<K, V>,
     private val consumer: ReactiveKafkaConsumerTemplate<K, R>,
     private val metrics: DemoKafkaMetrics,
-    private val replyTimeout: Duration,
+    private val defaultReplyTimeout: Duration,
     replyTopic: String,
 ) : SmartLifecycle, DisposableBean {
     private val replyTopic = replyTopic.toByteArray(Charsets.UTF_8)
@@ -43,13 +44,13 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
     @Volatile
     private var running = false
 
-    private val channels: ConcurrentHashMap<ByteArray, SendChannel<ConsumerRecord<K, R>>> = ConcurrentHashMap()
+    private val channels: ConcurrentHashMap<ByteArrayWrapper, SendChannel<ConsumerRecord<K, R>>> = ConcurrentHashMap()
 
     private var subscription: Disposable? = null
 
     suspend fun sendAndReceive(
         producerRecord: ProducerRecord<K, V>,
-        replyTimeout: Duration = this.replyTimeout
+        replyTimeout: Duration = this.defaultReplyTimeout
     ): ConsumerRecord<K, R> {
         Assert.state(this.running, "Template has not been started")
 
@@ -60,11 +61,11 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
         if (!hasReplyTopic) {
             headers.add(RecordHeader(KafkaHeaders.REPLY_TOPIC, this.replyTopic))
         }
-        headers.add(RecordHeader(KafkaHeaders.CORRELATION_ID, correlationId))
+        headers.add(RecordHeader(KafkaHeaders.CORRELATION_ID, correlationId.bytes))
 
-        log.info { "Sending: ${KafkaUtils.format(producerRecord)} with correlationId: ${correlationId.toHexString()}" }
+        log.info { "Sending: ${KafkaUtils.format(producerRecord)} with correlationId: $correlationId" }
 
-        val channel = Channel<ConsumerRecord<K, R>>()
+        val channel = Channel<ConsumerRecord<K, R>>(1)
         this.channels[correlationId] = channel
 
         return try {
@@ -72,7 +73,7 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
                 try {
                     val senderResult = producer.send(producerRecord).awaitSingle()
                     metrics.kafkaProduce(producerRecord.topic()).increment()
-                    log.info { "Sent: ${KafkaUtils.format(producerRecord)} with correlationId: ${correlationId.toHexString()}" }
+                    log.info { "Sent: ${KafkaUtils.format(producerRecord)} with correlationId: $correlationId" }
                 } catch (ex: Exception) {
                     metrics.kafkaProduceErrors(producerRecord.topic()).increment()
                     this@ReactiveReplyingKafkaTemplate.channels.remove(correlationId)
@@ -82,7 +83,7 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
                 channel.receive()
             }
         } catch (ex: TimeoutCancellationException) {
-            log.warn { "Reply timed out for: ${KafkaUtils.format(producerRecord)} with correlationId: ${correlationId.toHexString()}" }
+            log.warn { "Reply timed out for: ${KafkaUtils.format(producerRecord)} with correlationId: $correlationId" }
             throw KafkaReplyTimeoutException("Reply timed out")
         }
     }
@@ -93,20 +94,21 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
             this.subscription = this.consumer
                 .receiveAutoAck()
                 .concatMap { consumerRecord ->
-                    val correlationHeader = consumerRecord.headers().lastHeader(KafkaHeaders.CORRELATION_ID)
-                    if (correlationHeader == null) {
-
+                    val correlationIdHeader = consumerRecord.headers().lastHeader(KafkaHeaders.CORRELATION_ID)
+                    if (correlationIdHeader == null) {
+                        log.warn { "correlationIdHeader is null" }
                     }
-                    val correlationId = correlationHeader.value()
+                    val correlationId = correlationIdHeader.value()
                     if (correlationId == null) {
-
+                        log.warn { "correlationId is null" }
                     } else {
-                        val channel = this.channels.remove(correlationId)
+                        val channel = this.channels.remove(ByteArrayWrapper(correlationId))
                         if (channel == null) {
-
+                            log.warn { "channel is null" }
                         } else {
                             val exception = DemoKafkaUtils.checkForErrors(consumerRecord)
                             if (exception != null) {
+                                log.warn(exception) { "Deserialization error" }
                                 channel.close(exception)
                             } else {
                                 return@concatMap mono { channel.send(consumerRecord) }
@@ -135,5 +137,20 @@ class ReactiveReplyingKafkaTemplate<K, V, R>(
         producer.destroy()
     }
 
-    private fun calcCorrelationId(producerRecord: ProducerRecord<K, V>): ByteArray = Random.nextBytes(16)
+    private fun calcCorrelationId(record: ProducerRecord<K, V>): ByteArrayWrapper = ByteArrayWrapper()
+
+    class ByteArrayWrapper(val bytes: ByteArray = Random.nextBytes(16)) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as ByteArrayWrapper
+
+            return bytes.contentEquals(other.bytes)
+        }
+
+        override fun hashCode(): Int = bytes.contentHashCode()
+
+        override fun toString(): String = bytes.toHexString()
+    }
 }

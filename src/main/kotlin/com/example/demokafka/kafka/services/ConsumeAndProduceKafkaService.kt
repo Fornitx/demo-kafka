@@ -41,7 +41,7 @@ class ConsumeAndProduceKafkaService(
             consumer.receiveAutoAck()
                 .timestamp()
                 .doOnSubscribe {
-                    log.info { "Kafka Consumer started for topic ${properties.inOutKafka.inputTopic}" }
+                    log.info { "Kafka Consumer started for topic ${properties.kafka.inOut.inputTopic}" }
                 }
                 .filter { filterObsolete(it.t2) }
                 .concatMap {
@@ -96,7 +96,7 @@ class ConsumeAndProduceKafkaService(
         }
 
         val replyTopic = record.headers().lastHeader(KafkaHeaders.REPLY_TOPIC)?.value()?.decodeToString()
-            ?: properties.inOutKafka.outputTopic
+            ?: properties.kafka.inOut.outputTopic
         val msg = value.msg
         val senderResult = producer.send(
             ProducerRecord(
@@ -110,8 +110,8 @@ class ConsumeAndProduceKafkaService(
             metrics.kafkaProduce(replyTopic).increment()
             log.debug { "SenderResult: $senderResult" }
         } else {
-            log.error(senderResult.exception()) { "SenderResult: $senderResult" }
             metrics.kafkaProduceErrors(replyTopic).increment()
+            log.error(senderResult.exception()) { "SenderResult: $senderResult" }
         }
     }
 

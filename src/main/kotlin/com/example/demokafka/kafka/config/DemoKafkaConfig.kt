@@ -1,18 +1,18 @@
 package com.example.demokafka.kafka.config
 
+import com.example.demokafka.kafka.ReactiveReplyingKafkaTemplate
 import com.example.demokafka.kafka.actuator.KafkaHealthIndicator
 import com.example.demokafka.kafka.metrics.DemoKafkaMetrics
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.kafka.services.ConsumeAndProduceKafkaService
 import com.example.demokafka.kafka.services.ProduceAndConsumeKafkaService
+import com.example.demokafka.kafka.services.ProduceAndConsumeKafkaServiceNewImpl
+import com.example.demokafka.kafka.services.ProduceAndConsumeKafkaServiceOldImpl
 import com.example.demokafka.properties.CustomKafkaProperties
 import com.example.demokafka.properties.DemoKafkaProperties
 import com.example.demokafka.properties.PREFIX
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.apache.kafka.common.serialization.LongSerializer
-import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.boot.actuate.health.ReactiveHealthIndicator
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties
@@ -38,10 +38,10 @@ class DemoKafkaConfig(
     private val springKafkaProperties: KafkaProperties,
     private val properties: DemoKafkaProperties,
 ) {
-    @ConditionalOnProperty("$PREFIX.in-out-kafka.enabled", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty("$PREFIX.kafka.in-out.enabled", havingValue = "true")
     @Configuration
     inner class InOutConfig {
-        private val kafkaProperties = properties.inOutKafka
+        private val kafkaProperties = properties.kafka.inOut
 
 //        @ConditionalOnMissingBean
 //        @Bean
@@ -68,7 +68,7 @@ class DemoKafkaConfig(
             metrics: DemoKafkaMetrics,
         ): ConsumeAndProduceKafkaService = ConsumeAndProduceKafkaService(properties, consumer, producer, metrics)
 
-        @ConditionalOnProperty("$PREFIX.in-out-kafka.health.enabled", havingValue = "true", matchIfMissing = false)
+        @ConditionalOnProperty("$PREFIX.kafka.in-out.health.enabled", havingValue = "true")
         @Configuration
         inner class InOutHealthConfig {
 //            @Bean
@@ -80,10 +80,10 @@ class DemoKafkaConfig(
         }
     }
 
-    @ConditionalOnProperty("$PREFIX.out-in-kafka.enabled", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty("$PREFIX.kafka.out-in.enabled", havingValue = "true")
     @Configuration
     inner class OutInConfig {
-        private val kafkaProperties = properties.outInKafka
+        private val kafkaProperties = properties.kafka.outIn
 
 //        @ConditionalOnMissingBean
 //        @Bean
@@ -95,27 +95,67 @@ class DemoKafkaConfig(
 //        @Bean
 //        fun outTopic2(): NewTopic = newTopic(kafkaProperties.outputTopic)
 
+        @ConditionalOnProperty("$PREFIX.kafka.out-in-new-template", havingValue = "false")
         @Bean
-        fun replyingKafkaTemplate2(): ReplyingKafkaTemplate<String, DemoRequest, DemoResponse> {
+        fun replyingKafkaOldTemplate2(): ReplyingKafkaTemplate<String, DemoRequest, DemoResponse> {
             val producerProperties =
                 springKafkaProperties.buildProducerProperties(null) + kafkaProperties.buildProducerProperties(null)
             val consumerProperties =
                 springKafkaProperties.buildConsumerProperties(null) + kafkaProperties.buildConsumerProperties(null)
 
             val producerFactory = DefaultKafkaProducerFactory<String, DemoRequest>(producerProperties)
+            producerFactory.setValueSerializer(JsonSerializer<DemoRequest>().noTypeInfo())
             val consumerFactory = DefaultKafkaConsumerFactory<String, DemoResponse>(consumerProperties)
+            consumerFactory.setValueDeserializer(JsonDeserializer(DemoResponse::class.java).ignoreTypeHeaders())
+
             val containerProperties = ContainerProperties(kafkaProperties.inputTopic)
             val replyContainer = KafkaMessageListenerContainer(consumerFactory, containerProperties)
             return ReplyingKafkaTemplate(producerFactory, replyContainer)
         }
 
+        @ConditionalOnProperty("$PREFIX.kafka.out-in-new-template", havingValue = "true")
         @Bean
-        fun consumeAndProduceKafkaService(
-            template: ReplyingKafkaTemplate<String, DemoRequest, DemoResponse>,
+        fun replyingKafkaNewTemplate2(
             metrics: DemoKafkaMetrics,
-        ): ProduceAndConsumeKafkaService = ProduceAndConsumeKafkaService(properties, template, metrics)
+        ): ReactiveReplyingKafkaTemplate<String, DemoRequest, DemoResponse> {
+            val producerProperties =
+                springKafkaProperties.buildProducerProperties(null) + kafkaProperties.buildProducerProperties(null)
+            val consumerProperties =
+                springKafkaProperties.buildConsumerProperties(null) + kafkaProperties.buildConsumerProperties(null)
 
-        @ConditionalOnProperty("$PREFIX.out-in-kafka.health.enabled", havingValue = "true", matchIfMissing = false)
+            val senderOptions = SenderOptions.create<String, DemoRequest>(producerProperties)
+                .withValueSerializer(JsonSerializer<DemoRequest>().noTypeInfo())
+            val receiverOptions = ReceiverOptions.create<String, DemoResponse>(consumerProperties)
+                .withValueDeserializer(JsonDeserializer(DemoResponse::class.java).ignoreTypeHeaders())
+                .subscription(listOf(kafkaProperties.inputTopic))
+
+            val producer = ReactiveKafkaProducerTemplate(senderOptions)
+            val consumer = ReactiveKafkaConsumerTemplate(receiverOptions)
+
+            log.info { "KafkaProducer created on server ${senderOptions.bootstrapServers()}" }
+            log.info { "KafkaConsumer created for topic '${receiverOptions.subscriptionTopics()}' on server ${receiverOptions.bootstrapServers()}" }
+
+            return ReactiveReplyingKafkaTemplate(
+                producer, consumer, metrics, properties.kafka.outInTimeout, kafkaProperties.inputTopic
+            )
+        }
+
+        @Bean
+        fun produceAndConsumeKafkaService(
+            oldTemplate: ReplyingKafkaTemplate<String, DemoRequest, DemoResponse>?,
+            newTemplate: ReactiveReplyingKafkaTemplate<String, DemoRequest, DemoResponse>?,
+            metrics: DemoKafkaMetrics,
+        ): ProduceAndConsumeKafkaService {
+            return if (oldTemplate != null) {
+                ProduceAndConsumeKafkaServiceOldImpl(properties, oldTemplate, metrics)
+            } else if (newTemplate != null) {
+                ProduceAndConsumeKafkaServiceNewImpl(properties, newTemplate)
+            } else {
+                throw RuntimeException("all templates are null")
+            }
+        }
+
+        @ConditionalOnProperty("$PREFIX.kafka.out-in.health.enabled", havingValue = "true")
         @Configuration
         inner class OutInHealthConfig {
 //            @Bean
@@ -151,7 +191,6 @@ class DemoKafkaConfig(
                 springKafkaProperties.buildConsumerProperties(null) + customKafkaProperties.buildConsumerProperties(null)
 
             val receiverOptions = ReceiverOptions.create<String, T>(consumerProperties)
-                .withKeyDeserializer(StringDeserializer())
                 .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(T::class.java).ignoreTypeHeaders()))
                 .subscription(listOf(customKafkaProperties.inputTopic))
 
@@ -167,7 +206,6 @@ class DemoKafkaConfig(
             val producerProperties =
                 springKafkaProperties.buildProducerProperties(null) + customKafkaProperties.buildProducerProperties(null)
             val senderOptions = SenderOptions.create<String, T>(producerProperties)
-                .withKeySerializer(StringSerializer())
                 .withValueSerializer(JsonSerializer<T>().noTypeInfo())
 
             log.info { "KafkaProducer created on server ${senderOptions.bootstrapServers()}" }
@@ -182,8 +220,6 @@ class DemoKafkaConfig(
             val producerProperties =
                 springKafkaProperties.buildProducerProperties(null) + customKafkaProperties.buildProducerProperties(null)
             val senderOptions = SenderOptions.create<Long, Long>(producerProperties)
-                .withKeySerializer(LongSerializer())
-                .withValueSerializer(LongSerializer())
 
             log.info { "KafkaHealthIndicator created for topic '${customKafkaProperties.health.topic}' on server ${senderOptions.bootstrapServers()}" }
 

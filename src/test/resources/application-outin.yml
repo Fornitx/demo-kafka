@@ -1,3 +1,4 @@
 demo:
-  out-in-kafka:
-    enabled: true
+  kafka:
+    out-in:
+      enabled: true

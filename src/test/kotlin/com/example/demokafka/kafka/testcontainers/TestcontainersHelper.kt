@@ -6,13 +6,23 @@ import com.github.dockerjava.api.model.Ports
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
+import org.apache.kafka.common.config.TopicConfig
+import org.springframework.kafka.config.TopicBuilder
 import org.testcontainers.utility.DockerImageName
 import org.testcontainers.utility.TestcontainersConfiguration
 
 private val log = KotlinLogging.logger {}
 
 object TestcontainersHelper {
-    private val tcCfg = TestcontainersConfiguration.getInstance()
+    private const val healthTopic: String = "health_topic_tc"
+    private val topics: List<String> = listOf(
+        "in_out_in_topic_tc",
+        "in_out_out_topic_tc",
+        "out_in_in_topic_tc",
+        "out_in_out_topic_tc",
+    )
+
+    private val tcCfg: TestcontainersConfiguration = TestcontainersConfiguration.getInstance()
 
     val KAFKA_CONTAINER_OLD: org.testcontainers.containers.KafkaContainer by lazy {
         val kafkaContainerImage = tcCfg.getEnvVarOrProperty("kafka.container.image.old", "")
@@ -34,14 +44,12 @@ object TestcontainersHelper {
             .withReuse(true)
 
         kafkaContainer.start()
-        log.info { "Old KafkaContainer started on port ${kafkaContainer.bootstrapServers}" }
-        System.setProperty("TC_KAFKA", kafkaContainer.bootstrapServers)
 
-        AdminClient.create(
-            mapOf(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers)
-        ).use { adminClient ->
-            adminClient.createTopics(listOf(/* TODO topics */)).all().get()
-        }
+        val bootstrapServers = kafkaContainer.bootstrapServers
+        log.info { "Old KafkaContainer started on port $bootstrapServers" }
+        System.setProperty("TC_KAFKA", bootstrapServers)
+
+        createTopics(bootstrapServers)
 
         kafkaContainer
     }
@@ -63,15 +71,29 @@ object TestcontainersHelper {
             .withReuse(true)
 
         kafkaContainer.start()
-        log.info { "New KafkaContainer started on port ${kafkaContainer.bootstrapServers}" }
-        System.setProperty("TC_KAFKA", kafkaContainer.bootstrapServers)
 
-        AdminClient.create(
-            mapOf(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaContainer.bootstrapServers)
-        ).use { adminClient ->
-            adminClient.createTopics(listOf(/* TODO topics */)).all().get()
-        }
+        val bootstrapServers = kafkaContainer.bootstrapServers
+        log.info { "New KafkaContainer started on port $bootstrapServers" }
+        System.setProperty("TC_KAFKA", bootstrapServers)
+
+        createTopics(bootstrapServers)
 
         kafkaContainer
+    }
+
+    private fun createTopics(bootstrapServers: String) {
+        AdminClient.create(
+            mapOf(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers)
+        ).use { adminClient ->
+            val topics = topics.map { TopicBuilder.name(it).partitions(1).build() }
+                .plus(
+                    TopicBuilder.name(healthTopic)
+                        .partitions(1)
+                        .config(TopicConfig.RETENTION_BYTES_CONFIG, (1024L * 1024L).toString())
+                        .build()
+                )
+
+            adminClient.createTopics(topics)//.all().get()
+        }
     }
 }

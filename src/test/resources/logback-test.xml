@@ -1,4 +1,7 @@
 <configuration>
+    <!-- TODO remove in Spring Boot 3.3.4 -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+
     <property name="CONSOLE_LOG_PATTERN" value="${CONSOLE_LOG_PATTERN:-%clr(%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd'T'HH:mm:ss.SSSXXX}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(%applicationName[%20.20t]){faint} %clr(${LOG_CORRELATION_PATTERN:-}){faint}%clr(%-40.40logger{39}){cyan} %clr(:){faint} [%X] %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
 
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
@@ -14,4 +17,12 @@
     <logger name="org.apache.zookeeper" level="WARN"/>
     <logger name="kafka" level="WARN"/>
     <logger name="state.change.logger" level="WARN"/>
+
+    <logger name="org.testcontainers" level="WARN"/>
+    <logger name="tc" level="WARN"/>
+    <logger name="com.github.dockerjava" level="WARN"/>
+    <logger name="com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.wire" level="OFF"/>
+
+    <logger name="org.springframework.kafka.core.KafkaTemplate" level="DEBUG"/>
+    <logger name="org.springframework.kafka.requestreply.ReplyingKafkaTemplate" level="DEBUG"/>
 </configuration>

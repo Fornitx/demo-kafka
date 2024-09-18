@@ -48,7 +48,7 @@ class DemoKafkaMetrics(private val registry: MeterRegistry) {
     companion object {
         private val nameCache = ConcurrentHashMap<String, String>()
 
-        fun name(name: String): String = nameCache.computeIfAbsent(name) {
+        private fun name(name: String): String = nameCache.computeIfAbsent(name) {
             PREFIX + "_" + name
         }
     }

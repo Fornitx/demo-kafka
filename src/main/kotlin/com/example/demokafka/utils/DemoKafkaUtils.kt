@@ -12,7 +12,7 @@ object DemoKafkaUtils {
     fun checkForErrors(record: ConsumerRecord<*, *>): Exception? =
         if (record.value() == null || record.key() == null) checkDeserialization(record) else null
 
-    fun checkDeserialization(record: ConsumerRecord<*, *>): DeserializationException? {
+    private fun checkDeserialization(record: ConsumerRecord<*, *>): DeserializationException? {
         val logAccessor = LogAccessor(DemoKafkaUtils::class.java)
         var exception = SerializationUtils.getExceptionFromHeader(
             record, SerializationUtils.VALUE_DESERIALIZER_EXCEPTION_HEADER, logAccessor
