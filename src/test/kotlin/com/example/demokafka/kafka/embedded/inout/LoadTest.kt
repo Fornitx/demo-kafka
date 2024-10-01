@@ -8,9 +8,9 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
 @ActiveProfiles(TestProfiles.IN_OUT)
-class EmbRepeated1Test : AbstractEmbeddedKafkaTest() {
+class LoadTest : AbstractEmbeddedKafkaTest() {
     @RepeatedTest(5)
     fun test() {
-        inOutSimpleTest()
+        inOutLoadTest()
     }
 }

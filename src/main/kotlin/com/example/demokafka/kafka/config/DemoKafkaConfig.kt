@@ -128,6 +128,12 @@ class DemoKafkaConfig(
             val receiverOptions = ReceiverOptions.create<String, DemoResponse>(consumerProperties)
                 .withValueDeserializer(JsonDeserializer(DemoResponse::class.java).ignoreTypeHeaders())
                 .subscription(listOf(kafkaProperties.inputTopic))
+                .addAssignListener { partitions ->
+                    log.info("Assigned: {}", partitions)
+                }
+                .addRevokeListener { partitions ->
+                    log.info("Revoked: {}", partitions)
+                }
 
             val producer = ReactiveKafkaProducerTemplate(senderOptions)
             val consumer = ReactiveKafkaConsumerTemplate(receiverOptions)
@@ -193,6 +199,12 @@ class DemoKafkaConfig(
             val receiverOptions = ReceiverOptions.create<String, T>(consumerProperties)
                 .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(T::class.java).ignoreTypeHeaders()))
                 .subscription(listOf(customKafkaProperties.inputTopic))
+                .addAssignListener { partitions ->
+                    log.info("Assigned: {}", partitions)
+                }
+                .addRevokeListener { partitions ->
+                    log.info("Revoked: {}", partitions)
+                }
 
             log.info { "KafkaConsumer created for topic '${receiverOptions.subscriptionTopics()}' on server ${receiverOptions.bootstrapServers()}" }
 

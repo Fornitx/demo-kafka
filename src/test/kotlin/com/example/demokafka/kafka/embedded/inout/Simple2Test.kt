@@ -1,16 +1,16 @@
-package com.example.demokafka.kafka.testcontainers.tcold.inout
+package com.example.demokafka.kafka.embedded.inout
 
 import com.example.demokafka.TestProfiles
-import com.example.demokafka.kafka.testcontainers.tcold.AbstractOldTestcontainersKafkaTest
+import com.example.demokafka.kafka.embedded.AbstractEmbeddedKafkaTest
 import org.junit.jupiter.api.RepeatedTest
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
 @ActiveProfiles(TestProfiles.IN_OUT)
-class OldLoadTest : AbstractOldTestcontainersKafkaTest() {
+class Simple2Test : AbstractEmbeddedKafkaTest() {
     @RepeatedTest(5)
     fun test() {
-        inOutLoadTest()
+        inOutSimpleTest()
     }
 }

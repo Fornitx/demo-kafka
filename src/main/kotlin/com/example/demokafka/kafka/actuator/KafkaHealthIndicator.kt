@@ -13,14 +13,16 @@ class KafkaHealthIndicator(
 ) : ReactiveHealthIndicator, DisposableBean {
     private val producer: ReactiveKafkaProducerTemplate<Long, Long> = ReactiveKafkaProducerTemplate(senderOptions)
 
+    private val healthUp = Health.up().withTopic(topic).build()
+
     override fun health(): Mono<Health> {
         val millis = System.currentTimeMillis()
         return producer.send(topic, millis, millis).map { senderResult ->
             val exception = senderResult.exception()
-            if (exception != null) {
-                Health.down().withTopic(topic).withError(exception.message).build()
+            if (exception == null) {
+                healthUp
             } else {
-                Health.up().withTopic(topic).build()
+                Health.down().withTopic(topic).withError(exception.message).build()
             }
         }.onErrorResume { throwable ->
             Mono.just(Health.down().withTopic(topic).withError(throwable.message).build())

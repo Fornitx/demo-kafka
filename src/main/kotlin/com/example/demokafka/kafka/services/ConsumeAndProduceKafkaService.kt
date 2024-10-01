@@ -23,6 +23,7 @@ import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.kafka.support.KafkaUtils
 import reactor.core.Disposable
 import reactor.core.publisher.Flux
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 private val log = KotlinLogging.logger { }
@@ -38,15 +39,21 @@ class ConsumeAndProduceKafkaService(
     @EventListener(ApplicationReadyEvent::class)
     fun ready() {
         subscription = Flux.defer {
-            consumer.receiveAutoAck()
+            consumer.receive()
                 .timestamp()
                 .doOnSubscribe {
                     log.info { "Kafka Consumer started for topic ${properties.kafka.inOut.inputTopic}" }
                 }
                 .filter { filterObsolete(it.t2) }
-                .concatMap {
+                .flatMap {
                     mono {
-                        processRecord(it.t2)
+                        try {
+                            processRecord(it.t2)
+                        } finally {
+                            it.t2.receiverOffset().acknowledge()
+                            metrics.kafkaTiming(properties.kafka.inOut.inputTopic)
+                                .record(System.currentTimeMillis() - it.t1, TimeUnit.MILLISECONDS)
+                        }
                     }
                 }
         }.doOnError { throwable ->

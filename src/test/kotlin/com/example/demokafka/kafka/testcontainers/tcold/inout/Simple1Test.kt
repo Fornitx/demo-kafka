@@ -8,7 +8,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
 @ActiveProfiles(TestProfiles.IN_OUT)
-class OldRepeated1Test : AbstractOldTestcontainersKafkaTest() {
+class Simple1Test : AbstractOldTestcontainersKafkaTest() {
     @RepeatedTest(5)
     fun test() {
         inOutSimpleTest()
