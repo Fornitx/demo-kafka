@@ -8,6 +8,7 @@ import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.common.config.TopicConfig
 import org.springframework.kafka.config.TopicBuilder
+import org.testcontainers.kafka.KafkaContainer
 import org.testcontainers.utility.DockerImageName
 import org.testcontainers.utility.TestcontainersConfiguration
 
@@ -24,46 +25,45 @@ object TestcontainersHelper {
 
     private val tcCfg: TestcontainersConfiguration = TestcontainersConfiguration.getInstance()
 
-    val KAFKA_CONTAINER_OLD: org.testcontainers.containers.KafkaContainer by lazy {
-        val kafkaContainerImage = tcCfg.getEnvVarOrProperty("kafka.container.image.old", "")
-        val dockerImageName = DockerImageName.parse(kafkaContainerImage)
-            .asCompatibleSubstituteFor("confluentinc/cp-kafka")
-        val kafkaContainer = org.testcontainers.containers.KafkaContainer(dockerImageName)
-            .withCreateContainerCmdModifier { createContainerCmd ->
-                createContainerCmd.hostConfig!!.withPortBindings(
-                    PortBinding(
-                        Ports.Binding.bindPort(org.testcontainers.containers.KafkaContainer.KAFKA_PORT),
-                        ExposedPort(org.testcontainers.containers.KafkaContainer.KAFKA_PORT)
-                    ),
-                    PortBinding(
-                        Ports.Binding.bindPort(org.testcontainers.containers.KafkaContainer.ZOOKEEPER_PORT),
-                        ExposedPort(org.testcontainers.containers.KafkaContainer.ZOOKEEPER_PORT)
-                    )
-                )
-            }
-            .withReuse(true)
+//    val KAFKA_CONTAINER_OLD: org.testcontainers.containers.KafkaContainer by lazy {
+//        val kafkaContainerImage = tcCfg.getEnvVarOrProperty("kafka.container.image.old", "")
+//        val dockerImageName = DockerImageName.parse(kafkaContainerImage)
+//            .asCompatibleSubstituteFor("confluentinc/cp-kafka")
+//        val kafkaContainer = org.testcontainers.containers.KafkaContainer(dockerImageName)
+//            .withCreateContainerCmdModifier { createContainerCmd ->
+//                createContainerCmd.hostConfig!!.withPortBindings(
+//                    PortBinding(
+//                        Ports.Binding.bindPort(org.testcontainers.containers.KafkaContainer.KAFKA_PORT),
+//                        ExposedPort(org.testcontainers.containers.KafkaContainer.KAFKA_PORT)
+//                    ),
+//                    PortBinding(
+//                        Ports.Binding.bindPort(org.testcontainers.containers.KafkaContainer.ZOOKEEPER_PORT),
+//                        ExposedPort(org.testcontainers.containers.KafkaContainer.ZOOKEEPER_PORT)
+//                    )
+//                )
+//            }
+//            .withReuse(true)
+//
+//        kafkaContainer.start()
+//
+//        val bootstrapServers = kafkaContainer.bootstrapServers
+//        log.info { "Old KafkaContainer started on port $bootstrapServers" }
+//        System.setProperty("TC_KAFKA", bootstrapServers)
+//
+//        createTopics(bootstrapServers)
+//
+//        kafkaContainer
+//    }
 
-        kafkaContainer.start()
-
-        val bootstrapServers = kafkaContainer.bootstrapServers
-        log.info { "Old KafkaContainer started on port $bootstrapServers" }
-        System.setProperty("TC_KAFKA", bootstrapServers)
-
-        createTopics(bootstrapServers)
-
-        kafkaContainer
-    }
-
-    val KAFKA_CONTAINER_NEW: org.testcontainers.kafka.KafkaContainer by lazy {
-        val tcCfg = TestcontainersConfiguration.getInstance()
+    val KAFKA_CONTAINER_NEW: KafkaContainer by lazy {
         val kafkaContainerImage = tcCfg.getEnvVarOrProperty("kafka.container.image.new", "")
         val dockerImageName = DockerImageName.parse(kafkaContainerImage)
             .asCompatibleSubstituteFor("apache/kafka")
-        val kafkaContainer = org.testcontainers.kafka.KafkaContainer(dockerImageName)
+        val kafkaContainer = KafkaContainer(dockerImageName)
             .withCreateContainerCmdModifier { createContainerCmd ->
                 createContainerCmd.hostConfig!!.withPortBindings(
                     PortBinding(
-                        Ports.Binding.bindPort(9092),
+                        Ports.Binding.bindPort(0),
                         ExposedPort(9092)
                     )
                 )

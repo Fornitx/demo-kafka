@@ -16,11 +16,10 @@ management:
     readinessstate:
       enabled: true
 
-logging:
-  pattern:
-    dateformat: HH:mm:ss.SSS
-
 spring:
+  output:
+    ansi:
+      enabled: always
   kafka:
     consumer:
       auto-offset-reset: earliest
