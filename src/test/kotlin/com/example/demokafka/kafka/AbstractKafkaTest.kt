@@ -39,7 +39,10 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
 
     protected val producerFactory by lazy {
         DefaultKafkaProducerFactory(
-            mapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers),
+            mapOf(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+                ProducerConfig.MAX_BLOCK_MS_CONFIG to 5000,
+            ),
             StringSerializer(),
             StringSerializer(),
         )

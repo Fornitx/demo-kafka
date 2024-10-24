@@ -13,18 +13,14 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.header.internals.RecordHeaders
-import org.apache.kafka.common.record.TimestampType.*
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
 import org.springframework.kafka.support.KafkaHeaders
-import org.springframework.kafka.support.KafkaUtils
 import reactor.core.Disposable
-import reactor.core.publisher.Flux
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 
 private val log = KotlinLogging.logger { }
 
@@ -37,43 +33,40 @@ class ConsumeAndProduceKafkaService(
     private var subscription: Disposable? = null
 
     @EventListener(ApplicationReadyEvent::class)
-    fun ready() {
-        subscription = Flux.defer {
-            consumer.receive()
-                .timestamp()
-                .doOnSubscribe {
-                    log.info { "Kafka Consumer started for topic ${properties.kafka.inOut.inputTopic}" }
-                }
-                .filter { filterObsolete(it.t2) }
-                .flatMap {
-                    mono {
-                        try {
-                            processRecord(it.t2)
-                        } finally {
-                            it.t2.receiverOffset().acknowledge()
-                            metrics.kafkaTiming(properties.kafka.inOut.inputTopic)
-                                .record(System.currentTimeMillis() - it.t1, TimeUnit.MILLISECONDS)
-                        }
+    fun startConsumer() {
+        subscription = consumer.receive()
+            .timestamp()
+            .doOnSubscribe {
+                log.info { "Kafka Consumer started for topic ${properties.kafka.inOut.inputTopic}" }
+            }
+//            .filter { filterObsolete(it.t2) }
+            .concatMap {
+                mono {
+                    try {
+                        processRecord(it.t2)
+                    } catch (ex: Exception) {
+                        log.error(ex) { "Unexpected error in Kafka consumer!!!" }
+                    } finally {
+                        it.t2.receiverOffset().acknowledge()
+                        metrics.kafkaTiming(properties.kafka.inOut.inputTopic)
+                            .record(System.currentTimeMillis() - it.t1, TimeUnit.MILLISECONDS)
                     }
                 }
-        }.doOnError { throwable ->
-            log.error(throwable) { "Unexpected error in Kafka consumer!!!" }
-        }
-            .retry()
+            }
             .subscribe()
     }
 
-    private fun filterObsolete(record: ConsumerRecord<*, *>): Boolean = when (record.timestampType()) {
-        null, NO_TIMESTAMP_TYPE -> true
-        CREATE_TIME, LOG_APPEND_TIME -> {
-            if (abs(System.currentTimeMillis() - record.timestamp()) < 5000) {
-                true
-            } else {
-                log.warn { "Obsolete record ${KafkaUtils.format(record)}" }
-                false
-            }
-        }
-    }
+//    private fun filterObsolete(record: ConsumerRecord<*, *>): Boolean = when (record.timestampType()) {
+//        null, NO_TIMESTAMP_TYPE -> true
+//        CREATE_TIME, LOG_APPEND_TIME -> {
+//            if (abs(System.currentTimeMillis() - record.timestamp()) < 5000) {
+//                true
+//            } else {
+//                log.warn { "Obsolete record ${KafkaUtils.format(record)}" }
+//                false
+//            }
+//        }
+//    }
 
     private suspend fun processRecord(record: ConsumerRecord<String, DemoRequest>) {
         log.debug {

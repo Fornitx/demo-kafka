@@ -13,9 +13,12 @@ import com.example.demokafka.properties.CustomKafkaProperties
 import com.example.demokafka.properties.DemoKafkaProperties
 import com.example.demokafka.properties.PREFIX
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.actuate.health.ReactiveHealthIndicator
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties
+import org.springframework.boot.ssl.SslBundles
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
@@ -37,21 +40,12 @@ private val log = KotlinLogging.logger {}
 class DemoKafkaConfig(
     private val springKafkaProperties: KafkaProperties,
     private val properties: DemoKafkaProperties,
+    private val sslBundles: ObjectProvider<SslBundles>,
 ) {
     @ConditionalOnProperty("$PREFIX.kafka.in-out.enabled", havingValue = "true")
     @Configuration
     inner class InOutConfig {
         private val kafkaProperties = properties.kafka.inOut
-
-//        @ConditionalOnMissingBean
-//        @Bean
-//        fun kafkaAdmin(): KafkaAdmin = newKafkaAdmin(springKafkaProperties, kafkaProperties)
-//
-//        @Bean
-//        fun inTopic1(): NewTopic = newTopic(kafkaProperties.inputTopic, 4)
-//
-//        @Bean
-//        fun outTopic1(): NewTopic = newTopic(kafkaProperties.outputTopic)
 
         @Bean
         fun kafkaConsumer1(): ReactiveKafkaConsumerTemplate<String, DemoRequest> =
@@ -69,31 +63,15 @@ class DemoKafkaConfig(
         ): ConsumeAndProduceKafkaService = ConsumeAndProduceKafkaService(properties, consumer, producer, metrics)
 
         @ConditionalOnProperty("$PREFIX.kafka.in-out.health.enabled", havingValue = "true")
-        @Configuration
-        inner class InOutHealthConfig {
-//            @Bean
-//            fun healthCheckTopic1(): NewTopic = newTopic(kafkaProperties.health.topic)
-
-            @Bean
-            fun kafkaHealthIndicator1(): ReactiveHealthIndicator =
-                newKafkaHealthIndicator(springKafkaProperties, kafkaProperties)
-        }
+        @Bean
+        fun kafkaHealthIndicator1(): ReactiveHealthIndicator =
+            newKafkaHealthIndicator(springKafkaProperties, kafkaProperties)
     }
 
     @ConditionalOnProperty("$PREFIX.kafka.out-in.enabled", havingValue = "true")
     @Configuration
     inner class OutInConfig {
         private val kafkaProperties = properties.kafka.outIn
-
-//        @ConditionalOnMissingBean
-//        @Bean
-//        fun kafkaAdmin(): KafkaAdmin = newKafkaAdmin(springKafkaProperties, kafkaProperties)
-//
-//        @Bean
-//        fun inTopic2(): NewTopic = newTopic(kafkaProperties.inputTopic, 4)
-//
-//        @Bean
-//        fun outTopic2(): NewTopic = newTopic(kafkaProperties.outputTopic)
 
         @ConditionalOnProperty("$PREFIX.kafka.out-in-new-template", havingValue = "false")
         @Bean
@@ -118,22 +96,18 @@ class DemoKafkaConfig(
         fun replyingKafkaNewTemplate2(
             metrics: DemoKafkaMetrics,
         ): ReactiveReplyingKafkaTemplate<String, DemoRequest, DemoResponse> {
-            val producerProperties =
-                springKafkaProperties.buildProducerProperties(null) + kafkaProperties.buildProducerProperties(null)
-            val consumerProperties =
-                springKafkaProperties.buildConsumerProperties(null) + kafkaProperties.buildConsumerProperties(null)
+            val producerProperties = springKafkaProperties.buildProducerProperties(sslBundles.ifAvailable) +
+                    kafkaProperties.buildProducerProperties(sslBundles.ifAvailable)
+            val consumerProperties = springKafkaProperties.buildConsumerProperties(sslBundles.ifAvailable) +
+                    kafkaProperties.buildConsumerProperties(sslBundles.ifAvailable)
 
             val senderOptions = SenderOptions.create<String, DemoRequest>(producerProperties)
                 .withValueSerializer(JsonSerializer<DemoRequest>().noTypeInfo())
             val receiverOptions = ReceiverOptions.create<String, DemoResponse>(consumerProperties)
                 .withValueDeserializer(JsonDeserializer(DemoResponse::class.java).ignoreTypeHeaders())
                 .subscription(listOf(kafkaProperties.inputTopic))
-                .addAssignListener { partitions ->
-                    log.info("Assigned: {}", partitions)
-                }
-                .addRevokeListener { partitions ->
-                    log.info("Revoked: {}", partitions)
-                }
+                .addAssignListener { partitions -> log.info { "Assigned: $partitions" } }
+                .addRevokeListener { partitions -> log.info { "Revoked: $partitions" } }
 
             val producer = ReactiveKafkaProducerTemplate(senderOptions)
             val consumer = ReactiveKafkaConsumerTemplate(receiverOptions)
@@ -162,80 +136,53 @@ class DemoKafkaConfig(
         }
 
         @ConditionalOnProperty("$PREFIX.kafka.out-in.health.enabled", havingValue = "true")
-        @Configuration
-        inner class OutInHealthConfig {
-//            @Bean
-//            fun healthCheckTopic2(): NewTopic = newTopic(kafkaProperties.health.topic)
-
-            @Bean
-            fun kafkaHealthIndicator2(): ReactiveHealthIndicator =
-                newKafkaHealthIndicator(springKafkaProperties, kafkaProperties)
-        }
+        @Bean
+        fun kafkaHealthIndicator2(): ReactiveHealthIndicator =
+            newKafkaHealthIndicator(springKafkaProperties, kafkaProperties)
     }
 
-    companion object {
-//        private fun newKafkaAdmin(
-//            springKafkaProperties: KafkaProperties,
-//            customKafkaProperties: CustomKafkaProperties,
-//        ): KafkaAdmin {
-//            log.info { "KafkaAdmin created" }
-//            return KafkaAdmin(
-//                springKafkaProperties.buildAdminProperties(null) + customKafkaProperties.buildAdminProperties(null)
-//            )
-//        }
-//
-//        private fun newTopic(name: String, partitions: Int = 1): NewTopic {
-//            log.info { "Topic $name created" }
-//            return TopicBuilder.name(name).partitions(partitions).build()
-//        }
+    private inline fun <reified T> newKafkaConsumer(
+        springKafkaProperties: KafkaProperties,
+        customKafkaProperties: CustomKafkaProperties,
+    ): ReactiveKafkaConsumerTemplate<String, T> {
+        val consumerProperties = springKafkaProperties.buildConsumerProperties(sslBundles.ifAvailable) +
+                customKafkaProperties.buildConsumerProperties(sslBundles.ifAvailable)
+        val receiverOptions = ReceiverOptions.create<String, T>(consumerProperties)
+            .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(T::class.java).ignoreTypeHeaders()))
+            .subscription(listOf(customKafkaProperties.inputTopic))
+            .addAssignListener { partitions -> log.info { "Assigned: $partitions" } }
+            .addRevokeListener { partitions -> log.info { "Revoked: $partitions" } }
 
-        private inline fun <reified T> newKafkaConsumer(
-            springKafkaProperties: KafkaProperties,
-            customKafkaProperties: CustomKafkaProperties,
-        ): ReactiveKafkaConsumerTemplate<String, T> {
-            val consumerProperties =
-                springKafkaProperties.buildConsumerProperties(null) + customKafkaProperties.buildConsumerProperties(null)
+        log.info { "KafkaConsumer created for topic '${receiverOptions.subscriptionTopics()}' on server '${receiverOptions.bootstrapServers()}'" }
 
-            val receiverOptions = ReceiverOptions.create<String, T>(consumerProperties)
-                .withValueDeserializer(ErrorHandlingDeserializer(JsonDeserializer(T::class.java).ignoreTypeHeaders()))
-                .subscription(listOf(customKafkaProperties.inputTopic))
-                .addAssignListener { partitions ->
-                    log.info("Assigned: {}", partitions)
-                }
-                .addRevokeListener { partitions ->
-                    log.info("Revoked: {}", partitions)
-                }
+        return ReactiveKafkaConsumerTemplate(receiverOptions)
+    }
 
-            log.info { "KafkaConsumer created for topic '${receiverOptions.subscriptionTopics()}' on server ${receiverOptions.bootstrapServers()}" }
+    private fun <T> newKafkaProducer(
+        springKafkaProperties: KafkaProperties,
+        customKafkaProperties: CustomKafkaProperties,
+    ): ReactiveKafkaProducerTemplate<String, T> {
+        val producerProperties = springKafkaProperties.buildProducerProperties(sslBundles.ifAvailable) +
+                customKafkaProperties.buildProducerProperties(sslBundles.ifAvailable) +
+                mapOf(ProducerConfig.MAX_BLOCK_MS_CONFIG to 5000)
+        val senderOptions = SenderOptions.create<String, T>(producerProperties)
+            .withValueSerializer(JsonSerializer<T>().noTypeInfo())
 
-            return ReactiveKafkaConsumerTemplate(receiverOptions)
-        }
+        log.info { "KafkaProducer created on server '${senderOptions.bootstrapServers()}'" }
 
-        private fun <T> newKafkaProducer(
-            springKafkaProperties: KafkaProperties,
-            customKafkaProperties: CustomKafkaProperties,
-        ): ReactiveKafkaProducerTemplate<String, T> {
-            val producerProperties =
-                springKafkaProperties.buildProducerProperties(null) + customKafkaProperties.buildProducerProperties(null)
-            val senderOptions = SenderOptions.create<String, T>(producerProperties)
-                .withValueSerializer(JsonSerializer<T>().noTypeInfo())
+        return ReactiveKafkaProducerTemplate(senderOptions)
+    }
 
-            log.info { "KafkaProducer created on server ${senderOptions.bootstrapServers()}" }
+    private fun newKafkaHealthIndicator(
+        springKafkaProperties: KafkaProperties,
+        customKafkaProperties: CustomKafkaProperties,
+    ): ReactiveHealthIndicator {
+        val producerProperties = springKafkaProperties.buildProducerProperties(sslBundles.ifAvailable) +
+                customKafkaProperties.buildProducerProperties(sslBundles.ifAvailable)
+        val senderOptions = SenderOptions.create<Long, Long>(producerProperties)
 
-            return ReactiveKafkaProducerTemplate(senderOptions)
-        }
+        log.info { "KafkaHealthIndicator created for topic '${customKafkaProperties.health.topic}' on server '${senderOptions.bootstrapServers()}'" }
 
-        private fun newKafkaHealthIndicator(
-            springKafkaProperties: KafkaProperties,
-            customKafkaProperties: CustomKafkaProperties,
-        ): ReactiveHealthIndicator {
-            val producerProperties =
-                springKafkaProperties.buildProducerProperties(null) + customKafkaProperties.buildProducerProperties(null)
-            val senderOptions = SenderOptions.create<Long, Long>(producerProperties)
-
-            log.info { "KafkaHealthIndicator created for topic '${customKafkaProperties.health.topic}' on server ${senderOptions.bootstrapServers()}" }
-
-            return KafkaHealthIndicator(senderOptions, customKafkaProperties.health.topic)
-        }
+        return KafkaHealthIndicator(senderOptions, customKafkaProperties.health.topic)
     }
 }

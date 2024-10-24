@@ -4,8 +4,6 @@ management:
       show-details: always
       probes:
         enabled: true
-    shutdown:
-      enabled: true
   endpoints:
     web:
       exposure:
@@ -17,13 +15,18 @@ management:
       enabled: true
 
 spring:
-  output:
-    ansi:
-      enabled: always
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
   kafka:
     consumer:
       auto-offset-reset: earliest
       group-id: demo
+    producer:
+      properties:
+        max.block.ms: 5000
+  output:
+    ansi:
+      enabled: always
 
 demo:
   kafka:

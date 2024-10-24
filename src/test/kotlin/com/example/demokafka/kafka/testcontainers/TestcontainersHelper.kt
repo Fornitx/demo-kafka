@@ -28,7 +28,6 @@ object TestcontainersHelper {
 //    val KAFKA_CONTAINER_OLD: org.testcontainers.containers.KafkaContainer by lazy {
 //        val kafkaContainerImage = tcCfg.getEnvVarOrProperty("kafka.container.image.old", "")
 //        val dockerImageName = DockerImageName.parse(kafkaContainerImage)
-//            .asCompatibleSubstituteFor("confluentinc/cp-kafka")
 //        val kafkaContainer = org.testcontainers.containers.KafkaContainer(dockerImageName)
 //            .withCreateContainerCmdModifier { createContainerCmd ->
 //                createContainerCmd.hostConfig!!.withPortBindings(
@@ -55,10 +54,9 @@ object TestcontainersHelper {
 //        kafkaContainer
 //    }
 
-    val KAFKA_CONTAINER_NEW: KafkaContainer by lazy {
+    val KAFKA_CONTAINER: KafkaContainer by lazy {
         val kafkaContainerImage = tcCfg.getEnvVarOrProperty("kafka.container.image.new", "")
         val dockerImageName = DockerImageName.parse(kafkaContainerImage)
-            .asCompatibleSubstituteFor("apache/kafka")
         val kafkaContainer = KafkaContainer(dockerImageName)
             .withCreateContainerCmdModifier { createContainerCmd ->
                 createContainerCmd.hostConfig!!.withPortBindings(

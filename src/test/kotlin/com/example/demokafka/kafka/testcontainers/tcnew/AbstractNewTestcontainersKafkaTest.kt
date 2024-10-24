@@ -12,6 +12,6 @@ abstract class AbstractNewTestcontainersKafkaTest : AbstractKafkaTest() {
         get() = kafkaContainer.bootstrapServers
 
     companion object {
-        protected val kafkaContainer: KafkaContainer = TestcontainersHelper.KAFKA_CONTAINER_NEW
+        protected val kafkaContainer: KafkaContainer = TestcontainersHelper.KAFKA_CONTAINER
     }
 }
