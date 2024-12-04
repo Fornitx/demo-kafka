@@ -18,3 +18,5 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+*.log

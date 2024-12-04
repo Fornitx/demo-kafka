@@ -1,8 +1,8 @@
 plugins {
-    kotlin("jvm") version System.getProperty("kotlin.version")
-    kotlin("plugin.spring") version System.getProperty("kotlin.version")
-    id("org.springframework.boot") version System.getProperty("spring.version")
-    id("io.spring.dependency-management") version System.getProperty("spring.dm.version")
+    kotlin("jvm")
+    kotlin("plugin.spring")
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
 }
 
 group = "com.example"
@@ -14,8 +14,7 @@ java {
     }
 }
 
-ext["kotlin-coroutines.version"] = System.getProperty("kotlin.coroutines.version")
-//ext["kafka.version"] = "3.8.0"
+ext["kotlin-coroutines.version"] = providers.gradleProperty("kotlin-coroutines.version").get()
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -31,7 +30,11 @@ dependencies {
     implementation("org.springframework.kafka:spring-kafka")
     implementation("io.projectreactor.kafka:reactor-kafka")
 
-    implementation("io.github.oshai:kotlin-logging-jvm:" + System.getProperty("kotlin.logging.version"))
+    implementation("io.github.oshai:kotlin-logging-jvm:" + providers.gradleProperty("kotlin-logging.version").get())
+
+    constraints {
+        implementation("commons-io:commons-io:2.18.0")
+    }
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
@@ -52,7 +55,7 @@ kotlin {
     }
 }
 
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
 }
 

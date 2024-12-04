@@ -26,14 +26,12 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.kafka.support.KafkaUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
-import org.springframework.test.annotation.DirtiesContext
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-@DirtiesContext
 abstract class AbstractKafkaTest : AbstractMetricsTest() {
     protected abstract val bootstrapServers: String
 
