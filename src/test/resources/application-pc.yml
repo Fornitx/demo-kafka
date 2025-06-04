@@ -1,4 +1,4 @@
 demo:
   kafka:
-    in-out:
+    produce-consume:
       enabled: true

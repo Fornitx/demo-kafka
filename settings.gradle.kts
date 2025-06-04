@@ -1,6 +1,6 @@
 pluginManagement {
     plugins {
-        val kotlinVersion = settings.extra["kotlin-lang.version"] as String
+        val kotlinVersion = settings.extra["kotlin1-lang.version"] as String
         kotlin("jvm") version kotlinVersion
         kotlin("plugin.spring") version kotlinVersion
         id("org.springframework.boot") version settings.extra["spring-boot.version"] as String

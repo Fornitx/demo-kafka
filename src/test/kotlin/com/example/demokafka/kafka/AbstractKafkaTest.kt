@@ -4,20 +4,18 @@ import com.example.demokafka.AbstractMetricsTest
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.kafka.services.ProduceAndConsumeKafkaService
-import com.example.demokafka.utils.Constants.RQID
-import com.example.demokafka.utils.headers
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.example.demokafka.utils.log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Header
 import org.apache.kafka.common.header.internals.RecordHeader
-import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -27,7 +25,6 @@ import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.kafka.support.KafkaUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -58,19 +55,6 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
         )
     }
 
-//    private val template: KafkaTemplate<String, String> by lazy {
-//        KafkaTemplate(producerFactory)
-//    }
-
-//    protected val replyingTemplate: ReplyingKafkaTemplate<String, String, String> by lazy {
-//        ReplyingKafkaTemplate(
-//            producerFactory,
-//            KafkaMessageListenerContainer(consumerFactory, ContainerProperties(IN_TOPIC).apply {
-//                setGroupId(AbstractKafkaTest::class.simpleName!!)
-//            })
-//        )
-//    }
-
     protected fun produce(
         topic: String,
         data: String,
@@ -81,6 +65,14 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
         producer.send(record).get(timeout.toMillis(), TimeUnit.MILLISECONDS).also { recordMetadata ->
             log.debug { "Sent ${KafkaUtils.format(record)} as $recordMetadata" }
         }
+    }
+
+    protected fun consumeSingle(
+        topic: String,
+        timeout: Duration = Duration.ofSeconds(5),
+    ): ConsumerRecord<String, String> = consumerFactory.createConsumer().use { consumer ->
+        consumer.subscribe(listOf(topic))
+        KafkaTestUtils.getSingleRecord(consumer, topic, timeout)
     }
 
     protected fun consume(
@@ -96,86 +88,23 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
     ///////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    protected fun inOutSimpleTest() {
-        val requestId = UUID.randomUUID().toString()
-
-        val sendResult = produce(
-            properties.kafka.inOut.inputTopic,
-            objectMapper.writeValueAsString(DemoRequest("Abc")),
-            headers = headers(
-                RQID to requestId,
-                KafkaHeaders.REPLY_TOPIC to properties.kafka.inOut.outputTopic,
-            )
-        )
-        log.info { "Sent $sendResult" }
-
-        val records = consume(properties.kafka.inOut.outputTopic)
-        assertEquals(1, records.count())
-
-        val record = records.first()
-        log.info { "Received $record" }
-
-        log.info {
-            "\nReceived record \n" +
-                    "\tkey : ${record.key()}\n" +
-                    "\tvalue : ${record.value()}\n" +
-                    "\theaders : ${record.headers()}"
-        }
-
-        assertEquals(requestId, record.headers().lastHeader(RQID).value().decodeToString())
-        assertEquals("Abc".repeat(3), objectMapper.readValue<DemoResponse>(record.value()).msg)
-    }
-
-    protected fun inOutLoadTest() {
-        val count = 100
-
-        producerFactory.createProducer().use { producer ->
-            repeat(count) {
-                producer.send(
-                    ProducerRecord(
-                        properties.kafka.inOut.inputTopic,
-                        null,
-                        null,
-                        null,
-                        objectMapper.writeValueAsString(DemoRequest("Abc")),
-                        RecordHeaders(
-                            listOf(
-                                RecordHeader(RQID, UUID.randomUUID().toString().toByteArray(Charsets.UTF_8)),
-                                RecordHeader(
-                                    KafkaHeaders.REPLY_TOPIC,
-                                    properties.kafka.inOut.outputTopic.toByteArray(Charsets.UTF_8)
-                                ),
-                            )
-                        ),
-                    )
-                )
-            }
-        }
-
-        val records = consume(properties.kafka.inOut.outputTopic, minRecords = count)
-        assertEquals(count, records.count())
-
-        assertEquals(count.toDouble(), metrics.kafkaConsume(properties.kafka.inOut.inputTopic).count())
-        assertEquals(count.toDouble(), metrics.kafkaProduce(properties.kafka.inOut.outputTopic).count())
-    }
-
     protected suspend fun CoroutineScope.outInSimpleTest(service: ProduceAndConsumeKafkaService) {
         // call service
         val request = DemoRequest("Abc")
         val deferred = async(Dispatchers.IO) { service.sendAndReceive(request) }
 
         // consume sent record
-        val records = consume(properties.kafka.outIn.outputTopic)
-        assertEquals(1, records.count())
+        val sentRecord = consumeSingle(properties.kafka.produceConsume.outputTopic)
+        log.info { sentRecord.log() }
 
-        val sentRecord = records.first()
         log.info { "Sent record: ${KafkaUtils.format(sentRecord)}" }
 
         // check reply topic header
         val replyTopicHeader = sentRecord.headers().lastHeader(KafkaHeaders.REPLY_TOPIC)
+        // TODO reply partition
         assertNotNull(replyTopicHeader)
         assertArrayEquals(
-            properties.kafka.outIn.inputTopic.toByteArray(Charsets.UTF_8),
+            properties.kafka.produceConsume.inputTopic.encodeToByteArray(),
             replyTopicHeader.value()
         )
 
@@ -191,7 +120,7 @@ abstract class AbstractKafkaTest : AbstractMetricsTest() {
         // send response
         val response = DemoResponse(request.msg.repeat(3))
         produce(
-            properties.kafka.outIn.inputTopic,
+            properties.kafka.produceConsume.inputTopic,
             objectMapper.writeValueAsString(response),
             listOf(RecordHeader(KafkaHeaders.CORRELATION_ID, correlationId)),
         )

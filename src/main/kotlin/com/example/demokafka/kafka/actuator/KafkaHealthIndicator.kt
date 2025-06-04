@@ -5,19 +5,17 @@ import org.springframework.boot.actuate.health.Health
 import org.springframework.boot.actuate.health.ReactiveHealthIndicator
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
 import reactor.core.publisher.Mono
-import reactor.kafka.sender.SenderOptions
 
 class KafkaHealthIndicator(
-    senderOptions: SenderOptions<Long, Long>,
+    private val producer: ReactiveKafkaProducerTemplate<Long, Long>,
     private val topic: String,
-) : ReactiveHealthIndicator, DisposableBean {
-    private val producer: ReactiveKafkaProducerTemplate<Long, Long> = ReactiveKafkaProducerTemplate(senderOptions)
+) : ReactiveHealthIndicator, AutoCloseable by producer, DisposableBean by producer {
 
     private val healthUp = Health.up().withTopic(topic).build()
 
     override fun health(): Mono<Health> {
         val millis = System.currentTimeMillis()
-        return producer.send(topic, millis, millis).map { senderResult ->
+        return producer.send(topic, millis).map { senderResult ->
             val exception = senderResult.exception()
             if (exception == null) {
                 healthUp

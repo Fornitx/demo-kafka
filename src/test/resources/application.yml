@@ -15,9 +15,8 @@ management:
       enabled: true
 
 spring:
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
   kafka:
+    bootstrap-servers: ${TC_KAFKA}
     consumer:
       auto-offset-reset: earliest
       group-id: demo
@@ -30,12 +29,18 @@ spring:
 
 demo:
   kafka:
-    in-out:
+    consume-produce:
       enabled: false
+      input-topic: consume_produce_input
+      output-topic: consume_produce_output
       health:
         enabled: false
-    out-in:
+        topic: health_check
+    produce-consume:
       enabled: false
+      input-topic: produce_consume_input
+      output-topic: produce_consume_output
       health:
         enabled: false
-    out-in-timeout: 5s
+        topic: health_check
+    produce-consume-timeout: 5s

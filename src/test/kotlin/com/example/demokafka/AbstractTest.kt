@@ -1,6 +1,6 @@
 package com.example.demokafka
 
-import com.example.demokafka.properties.DemoKafkaProperties
+import com.example.demokafka.properties.DemoProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
@@ -13,5 +13,5 @@ abstract class AbstractTest {
     protected lateinit var objectMapper: ObjectMapper
 
     @Autowired
-    protected lateinit var properties: DemoKafkaProperties
+    protected lateinit var properties: DemoProperties
 }

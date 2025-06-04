@@ -1,35 +1,40 @@
 package com.example.demokafka.kafka.metrics
 
 import com.example.demokafka.properties.PREFIX
+import com.fasterxml.jackson.databind.util.NamingStrategyImpls
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import org.jetbrains.annotations.TestOnly
+import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
 
-const val METRICS_TAG_TOPIC = "topic"
+const val METER_TAG_TOPIC = "topic"
 
 @Component
 class DemoKafkaMetrics(private val registry: MeterRegistry) {
+    fun timer(): Timer.Sample = Timer.start(registry)
+
     fun kafkaConsume(topic: String): Counter = counter(
         "", DemoKafkaMetrics::kafkaConsume.name,
-        METRICS_TAG_TOPIC, topic,
+        METER_TAG_TOPIC, topic,
     )
 
     fun kafkaProduce(topic: String): Counter = counter(
         "", DemoKafkaMetrics::kafkaProduce.name,
-        METRICS_TAG_TOPIC, topic,
+        METER_TAG_TOPIC, topic,
     )
 
     fun kafkaProduceErrors(topic: String): Counter = counter(
         "", DemoKafkaMetrics::kafkaProduceErrors.name,
-        METRICS_TAG_TOPIC, topic,
+        METER_TAG_TOPIC, topic,
     )
 
     fun kafkaTiming(topic: String): Timer = timer(
         "", DemoKafkaMetrics::kafkaTiming.name,
-        METRICS_TAG_TOPIC, topic,
+        METER_TAG_TOPIC, topic,
     )
 
     private fun counter(description: String, name: String, vararg tags: String): Counter =
@@ -47,9 +52,13 @@ class DemoKafkaMetrics(private val registry: MeterRegistry) {
 
     companion object {
         private val nameCache = ConcurrentHashMap<String, String>()
+        private val nameTranslator = NamingStrategyImpls.SNAKE_CASE
 
-        private fun name(name: String): String = nameCache.computeIfAbsent(name) {
-            PREFIX + "_" + name
+        @VisibleForTesting
+        @TestOnly
+        fun name(name: String): String = nameCache.computeIfAbsent(name) { key ->
+            val name = nameTranslator.translate(key).replace("_", ".")
+            "$PREFIX.$name"
         }
     }
 }

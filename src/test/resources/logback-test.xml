@@ -1,5 +1,5 @@
 <configuration>
-    <property name="CONSOLE_LOG_PATTERN" value="${CONSOLE_LOG_PATTERN:-%clr(%d{${LOG_DATEFORMAT_PATTERN:-HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}){} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %esb(%X){}%m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
+    <property name="CONSOLE_LOG_PATTERN" value="${CONSOLE_LOG_PATTERN:-%clr(%d{${LOG_DATEFORMAT_PATTERN:-HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}){} %clr(--- %esb(){APPLICATION_NAME}%esb{APPLICATION_GROUP}[%15.15t] ${LOG_CORRELATION_PATTERN:-}){faint}%clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
 
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
@@ -10,17 +10,14 @@
 
     <logger name="com.example" level="DEBUG"/>
 
-    <!-- Embedded Kafka -->
-    <logger name="org.apache.kafka" level="WARN"/>
-    <logger name="org.apache.zookeeper" level="WARN"/>
-    <logger name="kafka" level="WARN"/>
-    <logger name="state.change.logger" level="WARN"/>
-
     <!-- Testcontainers -->
     <logger name="org.testcontainers" level="WARN"/>
     <logger name="tc" level="WARN"/>
     <logger name="com.github.dockerjava" level="WARN"/>
     <logger name="com.github.dockerjava.zerodep.shaded.org.apache.hc.client5.http.wire" level="OFF"/>
+
+    <!-- Kafka -->
+    <logger name="org.apache.kafka" level="WARN"/>
 
     <logger name="org.springframework.kafka.core.KafkaTemplate" level="DEBUG"/>
     <logger name="org.springframework.kafka.requestreply.ReplyingKafkaTemplate" level="DEBUG"/>

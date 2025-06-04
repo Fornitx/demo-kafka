@@ -1,5 +1,6 @@
 package com.example.demokafka.utils
 
+import com.fasterxml.jackson.core.type.TypeReference
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.springframework.core.log.LogAccessor
@@ -35,3 +36,10 @@ object DemoKafkaUtils {
         return null
     }
 }
+
+inline fun <reified T> typeRef() = object : TypeReference<T>() {}
+
+fun ConsumerRecord<*, *>.log(): String = "Record received:\n" +
+        "\tkey     : ${this.key()}\n" +
+        "\tvalue   : ${this.value()}\n" +
+        "\theaders : ${this.headers()}"

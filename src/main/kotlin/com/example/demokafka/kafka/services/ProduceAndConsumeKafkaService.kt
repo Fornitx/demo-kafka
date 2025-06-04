@@ -4,8 +4,8 @@ import com.example.demokafka.kafka.ReactiveReplyingKafkaTemplate
 import com.example.demokafka.kafka.metrics.DemoKafkaMetrics
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
-import com.example.demokafka.properties.DemoKafkaKafkaProperties
 import com.example.demokafka.properties.DemoKafkaProperties
+import com.example.demokafka.properties.DemoProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.future.await
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -16,23 +16,22 @@ import java.time.Duration
 private val log = KotlinLogging.logger {}
 
 sealed class ProduceAndConsumeKafkaService(
-    private val properties: DemoKafkaKafkaProperties,
+    properties: DemoKafkaProperties,
 ) {
-    protected val topic: String
-        get() = properties.outIn.outputTopic
+    protected val outputTopic = properties.produceConsume.outputTopic
 
     abstract suspend fun sendAndReceive(request: DemoRequest, timeout: Duration? = null): DemoResponse
 }
 
 class ProduceAndConsumeKafkaServiceOldImpl(
-    properties: DemoKafkaProperties,
+    properties: DemoProperties,
     private val template: ReplyingKafkaTemplate<String, DemoRequest, DemoResponse>,
     private val metrics: DemoKafkaMetrics,
 ) : ProduceAndConsumeKafkaService(properties.kafka) {
     override suspend fun sendAndReceive(request: DemoRequest, timeout: Duration?): DemoResponse {
         log.info { "Sending demo request $request" }
 
-        val record = ProducerRecord<String, DemoRequest>(topic, request)
+        val record = ProducerRecord<String, DemoRequest>(outputTopic, request)
         val requestReplyFuture = when (timeout) {
             null -> template.sendAndReceive(record)
             else -> template.sendAndReceive(record, timeout)
@@ -40,11 +39,11 @@ class ProduceAndConsumeKafkaServiceOldImpl(
 
         try {
             val sendResult = requestReplyFuture.sendFuture.await()
-            metrics.kafkaProduce(topic).increment()
+            metrics.kafkaProduce(outputTopic).increment()
             log.info { "Sent ${KafkaUtils.format(record)} as ${sendResult.recordMetadata}" }
         } catch (ex: Exception) {
             log.error(ex) {}
-            metrics.kafkaProduceErrors(topic).increment()
+            metrics.kafkaProduceErrors(outputTopic).increment()
         }
 
         return requestReplyFuture.await().value()
@@ -52,13 +51,13 @@ class ProduceAndConsumeKafkaServiceOldImpl(
 }
 
 class ProduceAndConsumeKafkaServiceNewImpl(
-    properties: DemoKafkaProperties,
+    properties: DemoProperties,
     private val template: ReactiveReplyingKafkaTemplate<String, DemoRequest, DemoResponse>,
 ) : ProduceAndConsumeKafkaService(properties.kafka) {
     override suspend fun sendAndReceive(request: DemoRequest, timeout: Duration?): DemoResponse {
         log.info { "Sending demo request $request" }
 
-        val producerRecord = ProducerRecord<String, DemoRequest>(topic, request)
+        val producerRecord = ProducerRecord<String, DemoRequest>(outputTopic, request)
         val consumerRecord = when (timeout) {
             null -> template.sendAndReceive(producerRecord)
             else -> template.sendAndReceive(producerRecord, timeout)
