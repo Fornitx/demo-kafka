@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import org.apache.kafka.common.header.internals.RecordHeader
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.RepeatedTest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.kafka.support.KafkaHeaders
@@ -25,7 +25,7 @@ class SimpleTest : AbstractTestcontainersKafkaTest() {
     @Autowired
     private lateinit var service: ProduceAndConsumeKafkaService
 
-    @Test
+    @RepeatedTest(2)
     fun test() = runTest {
         // call service
         val request = DemoRequest("Abc")

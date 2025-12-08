@@ -26,6 +26,9 @@ class ProduceAndConsumeKafkaService(
     private val outputTopic = properties.outputTopic
 
     suspend fun sendAndReceive(request: DemoRequest, timeout: Duration? = null): DemoResponse {
+        // TODO blocking call inside coroutine
+        template.waitForAssignment(Duration.ofSeconds(10))
+
         log.info { "Sending demo request $request" }
 
         val firstTopicPartition = template.assignedReplyTopicPartitions?.firstOrNull()
