@@ -1,11 +1,12 @@
 package com.example.demokafka.utils
 
-import com.fasterxml.jackson.core.type.TypeReference
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.springframework.core.log.LogAccessor
+import org.springframework.kafka.support.KafkaUtils
 import org.springframework.kafka.support.serializer.DeserializationException
 import org.springframework.kafka.support.serializer.SerializationUtils
+import java.nio.ByteBuffer
 
 private val log = KotlinLogging.logger {}
 
@@ -37,9 +38,13 @@ object DemoKafkaUtils {
     }
 }
 
-inline fun <reified T> typeRef() = object : TypeReference<T>() {}
+//inline fun <reified T> typeRef() = object : TypeReference<T>() {}
 
-fun ConsumerRecord<*, *>.log(): String = "Record received:\n" +
+fun ConsumerRecord<*, *>.log(): String = "ConsumerRecord received: ${KafkaUtils.format(this)}\n" +
         "\tkey     : ${this.key()}\n" +
         "\tvalue   : ${this.value()}\n" +
         "\theaders : ${this.headers()}"
+
+fun ByteArray.decodeToInt(): Int = ByteBuffer.wrap(this).int
+
+fun Int.encodeToByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()

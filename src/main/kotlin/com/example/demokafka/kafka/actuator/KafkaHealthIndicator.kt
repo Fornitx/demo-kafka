@@ -1,34 +1,45 @@
 package com.example.demokafka.kafka.actuator
 
-import org.springframework.beans.factory.DisposableBean
-import org.springframework.boot.actuate.health.Health
-import org.springframework.boot.actuate.health.ReactiveHealthIndicator
-import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
-import reactor.core.publisher.Mono
+import com.example.demokafka.properties.KafkaHealthProperties
+import org.apache.kafka.clients.producer.RecordMetadata
+import org.springframework.boot.health.contributor.Health
+import org.springframework.boot.health.contributor.HealthIndicator
+import org.springframework.kafka.core.KafkaTemplate
 
 class KafkaHealthIndicator(
-    private val producer: ReactiveKafkaProducerTemplate<Long, Long>,
-    private val topic: String,
-) : ReactiveHealthIndicator, AutoCloseable by producer, DisposableBean by producer {
+    properties: KafkaHealthProperties,
+    private val kafkaTemplate: KafkaTemplate<String, Long>,
+) : HealthIndicator {
+    private val topic = properties.outputTopic
 
-    private val healthUp = Health.up().withTopic(topic).build()
-
-    override fun health(): Mono<Health> {
-        val millis = System.currentTimeMillis()
-        return producer.send(topic, millis).map { senderResult ->
-            val exception = senderResult.exception()
-            if (exception == null) {
-                healthUp
-            } else {
-                Health.down().withTopic(topic).withError(exception.message).build()
-            }
-        }.onErrorResume { throwable ->
-            Mono.just(Health.down().withTopic(topic).withError(throwable.message).build())
+    override fun health(): Health {
+        val currentTimeMillis = System.currentTimeMillis()
+        return try {
+            val sendResult = kafkaTemplate.send(topic, currentTimeMillis).get()
+            Health.up()
+                .withTopic(topic)
+                .withMillis(currentTimeMillis)
+                .withMeta(sendResult.recordMetadata)
+                .build()
+        } catch (ex: Exception) {
+            Health.down()
+                .withTopic(topic)
+                .withMillis(currentTimeMillis)
+                .withError(ex)
+                .build()
         }
     }
 
-    override fun destroy() = producer.destroy()
+    private fun Health.Builder.withTopic(topic: String): Health.Builder =
+        this.withDetail("topic", topic)
 
-    private fun Health.Builder.withTopic(topic: String): Health.Builder = this.withDetail("topic", topic)
-    private fun Health.Builder.withError(msg: String?): Health.Builder = this.withDetail("error", msg)
+    private fun Health.Builder.withMillis(millis: Long): Health.Builder =
+        this.withDetail("currentTimeMillis", millis)
+
+    private fun Health.Builder.withMeta(meta: RecordMetadata): Health.Builder =
+        this.withDetail("partition", meta.partition())
+            .withDetail("offset", meta.offset())
+
+    private fun Health.Builder.withError(ex: Exception): Health.Builder =
+        this.withDetail("error", ex.message.toString())
 }

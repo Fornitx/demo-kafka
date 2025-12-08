@@ -1,15 +1,16 @@
 package com.example.demokafka.kafka.metrics
 
 import com.example.demokafka.properties.PREFIX
-import com.fasterxml.jackson.databind.util.NamingStrategyImpls
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.annotations.VisibleForTesting
+import org.springframework.data.util.ParsingUtils
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KFunction
 
 const val METER_TAG_TOPIC = "topic"
 
@@ -17,47 +18,51 @@ const val METER_TAG_TOPIC = "topic"
 class DemoKafkaMetrics(private val registry: MeterRegistry) {
     fun timer(): Timer.Sample = Timer.start(registry)
 
+    fun kafkaConsumeLag(topic: String): Timer = timer(
+        "", DemoKafkaMetrics::kafkaConsumeLag,
+        METER_TAG_TOPIC, topic,
+    )
+
     fun kafkaConsume(topic: String): Counter = counter(
-        "", DemoKafkaMetrics::kafkaConsume.name,
+        "", DemoKafkaMetrics::kafkaConsume,
         METER_TAG_TOPIC, topic,
     )
 
     fun kafkaProduce(topic: String): Counter = counter(
-        "", DemoKafkaMetrics::kafkaProduce.name,
+        "", DemoKafkaMetrics::kafkaProduce,
         METER_TAG_TOPIC, topic,
     )
 
     fun kafkaProduceErrors(topic: String): Counter = counter(
-        "", DemoKafkaMetrics::kafkaProduceErrors.name,
+        "", DemoKafkaMetrics::kafkaProduceErrors,
         METER_TAG_TOPIC, topic,
     )
 
     fun kafkaTiming(topic: String): Timer = timer(
-        "", DemoKafkaMetrics::kafkaTiming.name,
+        "", DemoKafkaMetrics::kafkaTiming,
         METER_TAG_TOPIC, topic,
     )
 
-    private fun counter(description: String, name: String, vararg tags: String): Counter =
-        Counter.builder(name(name)).description(description).tags(*tags).register(registry)
+    private fun counter(description: String, func: KFunction<*>, vararg tags: String): Counter =
+        Counter.builder(name(func)).description(description).tags(*tags).register(registry)
 
-    private fun timer(description: String, name: String, vararg tags: String): Timer =
-        Timer.builder(name(name)).description(description).tags(*tags).register(registry)
+    private fun timer(description: String, func: KFunction<*>, vararg tags: String): Timer =
+        Timer.builder(name(func)).description(description).tags(*tags).register(registry)
 
     private fun gauge(
         description: String,
-        name: String,
+        func: KFunction<*>,
         vararg tags: String,
         numberSupplier: () -> Number
-    ): Gauge = Gauge.builder(name(name), numberSupplier).description(description).tags(*tags).register(registry)
+    ): Gauge = Gauge.builder(name(func), numberSupplier).description(description).tags(*tags).register(registry)
 
     companion object {
         private val nameCache = ConcurrentHashMap<String, String>()
-        private val nameTranslator = NamingStrategyImpls.SNAKE_CASE
 
         @VisibleForTesting
         @TestOnly
-        fun name(name: String): String = nameCache.computeIfAbsent(name) { key ->
-            val name = nameTranslator.translate(key).replace("_", ".")
+        fun name(func: KFunction<*>): String = nameCache.computeIfAbsent(func.name) { key ->
+            val name = ParsingUtils.reconcatenateCamelCase(key, ".")
             "$PREFIX.$name"
         }
     }

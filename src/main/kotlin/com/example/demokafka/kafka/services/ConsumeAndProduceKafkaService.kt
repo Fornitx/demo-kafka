@@ -4,78 +4,68 @@ import com.example.demokafka.kafka.metrics.DemoKafkaMetrics
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.properties.CustomKafkaProperties
+import com.example.demokafka.properties.PREFIX
 import com.example.demokafka.utils.Constants
 import com.example.demokafka.utils.DemoKafkaUtils
+import com.example.demokafka.utils.decodeToInt
 import com.example.demokafka.utils.log
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.reactor.awaitSingleOrNull
-import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.future.await
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.internals.RecordHeader
 import org.apache.kafka.common.header.internals.RecordHeaders
-import org.springframework.beans.factory.DisposableBean
-import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.event.EventListener
-import org.springframework.kafka.core.reactive.ReactiveKafkaConsumerTemplate
-import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate
+import org.apache.kafka.common.record.TimestampType.*
+import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.KafkaHeaders
-import reactor.core.Disposable
-import java.nio.ByteBuffer
+import org.springframework.kafka.support.KafkaUtils
+import java.time.Duration
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 private val log = KotlinLogging.logger { }
 
 class ConsumeAndProduceKafkaService(
     private val properties: CustomKafkaProperties,
-    private val consumer: ReactiveKafkaConsumerTemplate<String, DemoRequest>,
-    private val producer: ReactiveKafkaProducerTemplate<String, DemoResponse>,
+    private val kafkaTemplate: KafkaTemplate<String, DemoResponse>,
     private val metrics: DemoKafkaMetrics,
-) : DisposableBean {
-    private val inputTopic = properties.inputTopic
+) {
     private val outputTopic = properties.outputTopic
 
-    private var subscription: Disposable? = null
+    @KafkaListener(topics = [$$"${$$PREFIX.kafka.consume-produce.input-topic}"])
+    suspend fun startConsumer(consumerRecord: ConsumerRecord<String, DemoRequest>) {
+        val currentTimeMillis = System.currentTimeMillis()
 
-    @EventListener(ApplicationReadyEvent::class)
-    fun startConsumer() {
-        subscription = consumer.receiveAutoAck()
-            .timestamp()
-            .doOnSubscribe {
-                log.info { "Kafka Consumer started for topic $inputTopic" }
+        log.debug { consumerRecord.log() }
+        metrics.kafkaConsume(consumerRecord.topic()).increment()
+
+        when (consumerRecord.timestampType()) {
+            null, NO_TIMESTAMP_TYPE -> {
+                // do nothing
             }
-//            .filter { filterObsolete(it.t2) }
-            .concatMap {
-                mono {
-                    try {
-                        processRecord(it.t2)
-                    } catch (ex: Exception) {
-                        log.error(ex) { "Unexpected error in Kafka consumer!!!" }
-                    } finally {
-                        metrics.kafkaTiming(inputTopic)
-                            .record(System.currentTimeMillis() - it.t1, TimeUnit.MILLISECONDS)
-                    }
+
+            CREATE_TIME, LOG_APPEND_TIME -> {
+                val consumerLag = Duration.ofMillis(abs(currentTimeMillis - consumerRecord.timestamp()))
+                metrics.kafkaConsumeLag(consumerRecord.topic()).record(consumerLag)
+                if (consumerLag >= properties.consumerLag) {
+                    log.warn { "Obsolete record ${KafkaUtils.format(consumerRecord)}" }
+                    return
                 }
             }
-            .subscribe()
+        }
+
+        try {
+            processRecord(consumerRecord)
+        } catch (ex: Exception) {
+            log.error(ex) { "Unexpected error in Kafka consumer!!!" }
+        } finally {
+            metrics.kafkaTiming(consumerRecord.topic())
+                .record(System.currentTimeMillis() - currentTimeMillis, TimeUnit.MILLISECONDS)
+        }
     }
 
-//    private fun filterObsolete(record: ConsumerRecord<*, *>): Boolean = when (record.timestampType()) {
-//        null, NO_TIMESTAMP_TYPE -> true
-//        CREATE_TIME, LOG_APPEND_TIME -> {
-//            if (abs(System.currentTimeMillis() - record.timestamp()) < 5000) {
-//                true
-//            } else {
-//                log.warn { "Obsolete record ${KafkaUtils.format(record)}" }
-//                false
-//            }
-//        }
-//    }
-
     private suspend fun processRecord(record: ConsumerRecord<String, DemoRequest>) {
-        log.debug { record.log() }
-        metrics.kafkaConsume(record.topic()).increment()
-
         val exception = DemoKafkaUtils.checkForErrors(record)
         if (exception != null) {
             log.error(exception) {}
@@ -97,33 +87,24 @@ class ConsumeAndProduceKafkaService(
         val replyTopic = record.headers().lastHeader(KafkaHeaders.REPLY_TOPIC)?.value()?.decodeToString()
             ?: outputTopic
 
-        // TODO test this
         val replyPartition = record.headers().lastHeader(KafkaHeaders.REPLY_PARTITION)?.value()?.decodeToInt()
 
-        val msg = value.msg
-        val senderResult = producer.send(
-            ProducerRecord(
-                replyTopic, replyPartition, null, null,
+        val msg = value.msg1
+        // TODO try/catch send
+        val senderResult = kafkaTemplate.send(
+            ProducerRecord<String, DemoResponse>(
+                replyTopic, replyPartition, null,
                 DemoResponse(msg.repeat(3)),
                 RecordHeaders(listOf(RecordHeader(Constants.RQID, requestId.value())))
             )
-        ).awaitSingleOrNull()
+        ).await()
 
         if (senderResult == null) {
             metrics.kafkaProduceErrors(replyTopic).increment()
             log.error { "SenderResult is null" }
-        } else if (senderResult.exception() != null) {
-            metrics.kafkaProduceErrors(replyTopic).increment()
-            log.error(senderResult.exception()) { "SenderResult: $senderResult" }
         } else {
             metrics.kafkaProduce(replyTopic).increment()
             log.debug { "SenderResult: $senderResult" }
         }
     }
-
-    override fun destroy() {
-        subscription?.dispose()
-    }
-
-    private fun ByteArray.decodeToInt(): Int = ByteBuffer.wrap(this).int
 }

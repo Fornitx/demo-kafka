@@ -21,9 +21,9 @@ abstract class AbstractMetricsTest : AbstractTest() {
         registry.clear()
     }
 
-    protected fun assertNoMeter(name: String) {
-        assertNoRawMeter(DemoKafkaMetrics.name(name))
-    }
+//    protected fun assertNoMeter(name: String) {
+//        assertNoRawMeter(DemoKafkaMetrics.name(name))
+//    }
 
     protected fun assertNoRawMeter(name: String) {
         val meters = registry.find(name).meters()
@@ -33,15 +33,15 @@ abstract class AbstractMetricsTest : AbstractTest() {
     }
 
     protected fun assertMeter(func: KFunction<*>, tags: Map<String, String>, count: Int = 1) {
-        assertRawMeter(DemoKafkaMetrics.name(func.name), tags, count)
+        assertRawMeter(DemoKafkaMetrics.name(func), tags, count)
     }
 
     protected fun assertRawMeter(name: String, tags: Map<String, String>, count: Int = 1) {
         assertRawMeters(name, mapOf(tags to count))
     }
 
-    protected fun assertMeters(name: String, tagsCountMap: Map<Map<String, String>, Int>) {
-        assertRawMeters(DemoKafkaMetrics.name(name), tagsCountMap)
+    protected fun assertMeters(func: KFunction<*>, tagsCountMap: Map<Map<String, String>, Int>) {
+        assertRawMeters(DemoKafkaMetrics.name(func), tagsCountMap)
     }
 
     protected fun assertRawMeters(name: String, tagsCountMap: Map<Map<String, String>, Int>) {

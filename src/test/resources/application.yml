@@ -1,31 +1,30 @@
 management:
-  endpoint:
-    health:
-      show-details: always
-      probes:
-        enabled: true
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
+  endpoint.health.show-details: always
+  endpoints.web.exposure.include: "*"
 
 spring:
-  kafka:
-    bootstrap-servers: ${TC_KAFKA}
-    consumer:
-      auto-offset-reset: earliest
-      group-id: demo
-    producer:
-      properties:
-        max.block.ms: 5000
+  #    ssl:
+#      bundle: kafka1
+##      protocol: TLSv1.3
+#      protocol: SSL
+#    security:
+##      protocol: TLSv1.3
+#      protocol: SSL
+#    properties:
+#      ssl.endpoint.identification.algorithm: ''
   output:
     ansi:
       enabled: always
+#  ssl.bundle.jks:
+#    kafka1:
+#      keystore:
+#        location: file:etc/ssl/test-client.p12
+#        password: password
+#        type: PKCS12
+#      truststore:
+#        location: file:etc/ssl/test-ca.p12
+#        password: password
+#        type: PKCS12
 
 demo:
   kafka:
@@ -33,14 +32,15 @@ demo:
       enabled: false
       input-topic: consume_produce_input
       output-topic: consume_produce_output
+      consumer-lag: 5s
       health:
         enabled: false
-        topic: health_check
+        output-topic: health_check
     produce-consume:
       enabled: false
       input-topic: produce_consume_input
       output-topic: produce_consume_output
+      consumer-lag: 5s
       health:
         enabled: false
-        topic: health_check
-    produce-consume-timeout: 5s
+        output-topic: health_check

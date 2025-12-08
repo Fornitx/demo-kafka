@@ -1,3 +1,3 @@
 package com.example.demokafka.kafka.model
 
-data class DemoRequest(val msg: String)
+data class DemoRequest(val msg1: String)

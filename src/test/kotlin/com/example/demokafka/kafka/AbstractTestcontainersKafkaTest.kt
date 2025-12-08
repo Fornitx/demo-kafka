@@ -9,6 +9,7 @@ abstract class AbstractTestcontainersKafkaTest : AbstractKafkaTest() {
         get() = kafkaContainer.bootstrapServers
 
     companion object {
+        @JvmStatic
         protected val kafkaContainer: KafkaContainer = DemoKafkaContainer
 
         init {

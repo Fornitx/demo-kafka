@@ -1,3 +1,24 @@
+spring:
+  kafka:
+    bootstrap-servers: ${TC_KAFKA}
+    consumer:
+      auto-offset-reset: earliest
+      group-id: demo
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.example.demokafka.kafka.model.DemoResponse
+    producer:
+      key-serializer: org.springframework.kafka.support.serializer.DelegatingByTopicSerializer
+      value-serializer: org.springframework.kafka.support.serializer.DelegatingByTopicSerializer
+      properties:
+        spring.kafka.key.serialization.bytopic.config: "${demo.kafka.produce-consume.output-topic}:org.apache.kafka.common.serialization.StringSerializer"
+        spring.kafka.value.serialization.bytopic.config: "${demo.kafka.produce-consume.output-topic}:org.springframework.kafka.support.serializer.JacksonJsonSerializer"
+        spring.json.add.type.headers: false
+
 demo:
   kafka:
     produce-consume:
