@@ -50,6 +50,8 @@ dependencies {
 //    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-kafka")
 
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.1.0")
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

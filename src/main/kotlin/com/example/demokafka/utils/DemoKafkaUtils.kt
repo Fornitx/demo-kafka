@@ -2,10 +2,13 @@ package com.example.demokafka.utils
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.common.header.internals.RecordHeader
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.springframework.core.log.LogAccessor
 import org.springframework.kafka.support.KafkaUtils
 import org.springframework.kafka.support.serializer.DeserializationException
 import org.springframework.kafka.support.serializer.SerializationUtils
+import java.io.Serializable
 import java.nio.ByteBuffer
 
 private val log = KotlinLogging.logger {}
@@ -47,4 +50,22 @@ fun ConsumerRecord<*, *>.log(): String = "ConsumerRecord received: ${KafkaUtils.
 
 fun ByteArray.decodeToInt(): Int = ByteBuffer.wrap(this).int
 
-fun Int.encodeToByteArray(): ByteArray = ByteBuffer.allocate(4).putInt(this).array()
+fun headers(vararg pairs: Pair<String, Serializable>): RecordHeaders? =
+    if (pairs.isEmpty()) {
+        null
+    } else {
+        RecordHeaders(pairs.map { (k, v) ->
+            RecordHeader(
+                k, when (v) {
+                    is String -> v.encodeToByteArray()
+                    is Int -> v.encodeToByteArray()
+                    is ByteArray -> v
+                    else -> throw IllegalArgumentException("$v is ${v::class}, which is not supported")
+                }
+            )
+        })
+    }
+
+fun Int.encodeToByteArray(): ByteArray {
+    return ByteBuffer.allocate(Int.SIZE_BYTES).putInt(this).array()
+}

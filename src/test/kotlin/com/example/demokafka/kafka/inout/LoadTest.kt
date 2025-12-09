@@ -10,7 +10,6 @@ import com.example.demokafka.utils.Constants.RQID
 import com.example.demokafka.utils.headers
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.TopicPartition
-import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.utils.CircularIterator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -39,13 +38,11 @@ class LoadTest : AbstractTestcontainersKafkaTest() {
                         null,
                         null,
                         jsonMapper.writeValueAsString(DemoRequest("Abc")),
-                        RecordHeaders(
-                            headers(
-                                RQID to randomUUID().toString(),
+                        headers(
+                            RQID to randomUUID().toString(),
 //                                KafkaHeaders.REPLY_TOPIC to kafkaProps.outputTopic,
-                                KafkaHeaders.REPLY_PARTITION to partitionIterator.next(),
-                            ),
-                        ),
+                            KafkaHeaders.REPLY_PARTITION to partitionIterator.next(),
+                        )
                     )
                 )
             }
@@ -60,5 +57,6 @@ class LoadTest : AbstractTestcontainersKafkaTest() {
         assertMeter(DemoKafkaMetrics::kafkaConsumeLag, mapOf(METER_TAG_TOPIC to kafkaProps.inputTopic), count)
         assertMeter(DemoKafkaMetrics::kafkaConsume, mapOf(METER_TAG_TOPIC to kafkaProps.inputTopic), count)
         assertMeter(DemoKafkaMetrics::kafkaProduce, mapOf(METER_TAG_TOPIC to kafkaProps.outputTopic), count)
+        assertMeter(DemoKafkaMetrics::kafkaTiming, mapOf(METER_TAG_TOPIC to kafkaProps.inputTopic), count)
     }
 }

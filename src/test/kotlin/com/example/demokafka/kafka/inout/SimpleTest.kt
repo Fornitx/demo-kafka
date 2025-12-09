@@ -50,5 +50,6 @@ class SimpleTest : AbstractTestcontainersKafkaTest() {
         assertMeter(DemoKafkaMetrics::kafkaConsumeLag, mapOf(METER_TAG_TOPIC to kafkaProps.inputTopic))
         assertMeter(DemoKafkaMetrics::kafkaConsume, mapOf(METER_TAG_TOPIC to kafkaProps.inputTopic))
         assertMeter(DemoKafkaMetrics::kafkaProduce, mapOf(METER_TAG_TOPIC to kafkaProps.outputTopic))
+        assertMeter(DemoKafkaMetrics::kafkaTiming, mapOf(METER_TAG_TOPIC to kafkaProps.inputTopic))
     }
 }

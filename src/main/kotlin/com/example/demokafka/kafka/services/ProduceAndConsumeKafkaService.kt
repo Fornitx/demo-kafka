@@ -4,13 +4,11 @@ import com.example.demokafka.kafka.metrics.DemoKafkaMetrics
 import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.properties.CustomKafkaProperties
-import com.example.demokafka.utils.encodeToByteArray
+import com.example.demokafka.utils.headers
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.future.await
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.KafkaException
-import org.apache.kafka.common.header.internals.RecordHeader
-import org.apache.kafka.common.header.internals.RecordHeaders
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate
 import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.kafka.support.KafkaUtils
@@ -35,11 +33,9 @@ class ProduceAndConsumeKafkaService(
             ?: throw KafkaException("No assigned topic/partitions found")
 
         val record = ProducerRecord<String, DemoRequest>(
-            outputTopic, null, null, request, RecordHeaders(
-                listOf(
-                    RecordHeader(KafkaHeaders.REPLY_TOPIC, firstTopicPartition.topic().encodeToByteArray()),
-                    RecordHeader(KafkaHeaders.REPLY_PARTITION, firstTopicPartition.partition().encodeToByteArray()),
-                )
+            outputTopic, null, null, request, headers(
+                KafkaHeaders.REPLY_TOPIC to firstTopicPartition.topic(),
+                KafkaHeaders.REPLY_PARTITION to firstTopicPartition.partition()
             )
         )
         val requestReplyFuture = when (timeout) {

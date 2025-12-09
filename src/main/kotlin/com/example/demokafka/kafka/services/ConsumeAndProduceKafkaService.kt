@@ -5,16 +5,11 @@ import com.example.demokafka.kafka.model.DemoRequest
 import com.example.demokafka.kafka.model.DemoResponse
 import com.example.demokafka.properties.CustomKafkaProperties
 import com.example.demokafka.properties.PREFIX
-import com.example.demokafka.utils.Constants
-import com.example.demokafka.utils.DemoKafkaUtils
-import com.example.demokafka.utils.decodeToInt
-import com.example.demokafka.utils.log
+import com.example.demokafka.utils.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.future.await
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.header.internals.RecordHeader
-import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.record.TimestampType.*
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
@@ -34,7 +29,7 @@ class ConsumeAndProduceKafkaService(
     private val outputTopic = properties.outputTopic
 
     @KafkaListener(topics = [$$"${$$PREFIX.kafka.consume-produce.input-topic}"])
-    suspend fun startConsumer(consumerRecord: ConsumerRecord<String, DemoRequest>) {
+    suspend fun consume(consumerRecord: ConsumerRecord<String, DemoRequest>) {
         val currentTimeMillis = System.currentTimeMillis()
 
         log.debug { consumerRecord.log() }
@@ -91,20 +86,20 @@ class ConsumeAndProduceKafkaService(
 
         val msg = value.msg1
         // TODO try/catch send
-        val senderResult = kafkaTemplate.send(
+        val sendResult = kafkaTemplate.send(
             ProducerRecord<String, DemoResponse>(
                 replyTopic, replyPartition, null,
                 DemoResponse(msg.repeat(3)),
-                RecordHeaders(listOf(RecordHeader(Constants.RQID, requestId.value())))
+                headers(Constants.RQID to requestId.value())
             )
         ).await()
 
-        if (senderResult == null) {
+        if (sendResult == null) {
             metrics.kafkaProduceErrors(replyTopic).increment()
-            log.error { "SenderResult is null" }
+            log.error { "SendResult is null" }
         } else {
             metrics.kafkaProduce(replyTopic).increment()
-            log.debug { "SenderResult: $senderResult" }
+            log.debug { "SendResult: $sendResult" }
         }
     }
 }
