@@ -28,7 +28,7 @@ class ConsumeAndProduceKafkaService(
 ) {
     private val outputTopic = properties.outputTopic
 
-    @KafkaListener(topics = [$$"${$$PREFIX.kafka.consume-produce.input-topic}"])
+    @KafkaListener(topics = [$$"${$$PREFIX.kafka.consume-produce.input-topic}"], errorHandler = "kleh")
     suspend fun consume(consumerRecord: ConsumerRecord<String, DemoRequest>) {
         val currentTimeMillis = System.currentTimeMillis()
 
@@ -102,4 +102,9 @@ class ConsumeAndProduceKafkaService(
             log.debug { "SendResult: $sendResult" }
         }
     }
+
+//    override fun handleError(message: Message<*>, exception: ListenerExecutionFailedException): Any {
+//        log.error(exception) {}
+//        TODO("Not yet implemented")
+//    }
 }

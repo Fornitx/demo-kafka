@@ -21,9 +21,9 @@ abstract class AbstractMetricsTest : AbstractTest() {
         registry.clear()
     }
 
-//    protected fun assertNoMeter(name: String) {
-//        assertNoRawMeter(DemoKafkaMetrics.name(name))
-//    }
+    protected fun assertNoMeter(func: KFunction<*>) {
+        assertNoRawMeter(DemoKafkaMetrics.name(func))
+    }
 
     protected fun assertNoRawMeter(name: String) {
         val meters = registry.find(name).meters()

@@ -1,14 +1,14 @@
 package com.example.demokafka.kafka
 
 import com.example.demokafka.AbstractMetricsTest
-import com.example.demokafka.TestProfiles
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration
+import org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration
 import org.springframework.kafka.core.ConsumerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.core.ProducerFactory
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 
-@ActiveProfiles(TestProfiles.MOCK_KAFKA)
+@ImportAutoConfiguration(exclude = [KafkaAutoConfiguration::class])
 abstract class AbstractMockKafkaTest : AbstractMetricsTest() {
     @MockitoBean
     private lateinit var consumerFactory: ConsumerFactory<*, *>
@@ -17,5 +17,5 @@ abstract class AbstractMockKafkaTest : AbstractMetricsTest() {
     private lateinit var producerFactory: ProducerFactory<*, *>
 
     @MockitoBean
-    protected lateinit var kafkaTemplate: KafkaTemplate<*, *>
+    protected lateinit var mockedKafkaTemplate: KafkaTemplate<*, *>
 }

@@ -13,7 +13,7 @@ class KafkaProfileTest : AbstractProfileTest() {
     @Test
     fun testConsumeProduce() {
         contextRunner().withProfiles(TestProfiles.CONSUME_PRODUCE).runLogging {
-            assertThat(it)
+            assertThat(it).hasNotFailed()
                 .hasSingleBean(ConsumeAndProduceKafkaService::class.java)
 
                 .doesNotHaveBean(ReplyingKafkaTemplate::class.java)
@@ -26,7 +26,7 @@ class KafkaProfileTest : AbstractProfileTest() {
     @Test
     fun testProduceConsume() {
         contextRunner().withProfiles(TestProfiles.PRODUCE_CONSUME).runLogging {
-            assertThat(it)
+            assertThat(it).hasNotFailed()
                 .doesNotHaveBean(ConsumeAndProduceKafkaService::class.java)
 
                 .hasSingleBean(ReplyingKafkaTemplate::class.java)

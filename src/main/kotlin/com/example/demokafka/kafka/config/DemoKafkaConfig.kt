@@ -9,15 +9,17 @@ import com.example.demokafka.kafka.services.ProduceAndConsumeKafkaService
 import com.example.demokafka.properties.CustomKafkaProperties
 import com.example.demokafka.properties.DemoProperties
 import com.example.demokafka.properties.PREFIX
+import org.apache.kafka.clients.consumer.Consumer
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.health.contributor.HealthIndicator
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.kafka.config.ContainerCustomizer
 import org.springframework.kafka.core.ConsumerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.core.ProducerFactory
-import org.springframework.kafka.listener.ContainerProperties
-import org.springframework.kafka.listener.KafkaMessageListenerContainer
+import org.springframework.kafka.listener.*
 import org.springframework.kafka.requestreply.ReplyingKafkaTemplate
 
 @Configuration
@@ -32,6 +34,27 @@ class DemoKafkaConfig(
     @Configuration
     inner class ConsumeProduceConfig {
         private val customKafkaProperties = properties.kafka.consumeProduce
+
+        @Bean
+        fun kleh(): KafkaListenerErrorHandler = KafkaListenerErrorHandler { consumerRecord, throwable ->
+            println(123)
+            throwable.printStackTrace()
+        }
+
+//        @Bean
+        fun <K : Any, V : Any, C: AbstractMessageListenerContainer<K, V>> containerCustomizer(): ContainerCustomizer<K, V, C> =
+            ContainerCustomizer { container ->
+                container.commonErrorHandler = object : CommonErrorHandler {
+                    override fun handleOne(
+                        thrownException: Exception,
+                        record: ConsumerRecord<*, *>,
+                        consumer: Consumer<*, *>,
+                        container: MessageListenerContainer,
+                    ): Boolean {
+                        return super.handleOne(thrownException, record, consumer, container)
+                    }
+                }
+            }
 
         @Bean
         fun consumeAndProduceKafkaService(kafkaTemplate: KafkaTemplate<String, DemoResponse>): ConsumeAndProduceKafkaService =
