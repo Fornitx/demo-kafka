@@ -27,7 +27,7 @@ jobs:
           --show-version
           --no-daemon
           --parallel
-          -Pkotlin-lang.version=2.3.0-RC2
+          -Pkotlin-lang.version=2.3.0
           -Pkotlin-coroutines.version=1.10.2
           -Pkotlin-logging.version=7.0.13
           -Pspring-boot.version=4.0.0
